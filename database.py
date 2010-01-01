@@ -96,6 +96,8 @@ class database(object):
 		return result
 	def lookupSongByLocation(self, location):
 		sess = self.sessionMaker()
+		if type(location) == str:
+			location = location.decode('utf-8')
 		result = sess.query(songfromdb).filter(songfromdb.location == location).one()
 		result = {'ID':result.ID, \
 		'title':unicode(result.title).encode('utf-8'), \
@@ -212,7 +214,7 @@ class playlist(object):
 		returnList.append(self.plName.center(62, '='))
 		returnList.append('\n')
 		for item in self.playlist:
-			returnList.append(self.db.pprintByLocation(item))
+			returnList.append(self.db.pprintByLocation(item).encode('utf-8'))
 			returnList.append('\n')
 		
 		returnList.append('==============================================================')

@@ -27,7 +27,9 @@ import gst
 import threading
 import time
 import datetime
+import Growl
 
+appName = 'PyPlayer'
 lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
 	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
 workingDir = u'/private/var/root/Working/PyPlayer2'
@@ -137,7 +139,7 @@ class commandShell(object):
 					self.plyr.pause()
 				elif userInput[0] == 'next':
 					self.plyr.playNext()
-				elif userInput[0] == 'pause':
+				elif userInput[0] == 'stop':
 					self.plyr.unprimePlayer()
 
 				#=============================================================================================
@@ -302,12 +304,7 @@ class commandShell(object):
 class player(object):
 	def playLocation(self, location, playType='random'):
 		self.dbName.pprintByLocation(location)
-		self.playType = playType
-		songRow = self.dbName.lookupSongByLocation(location)
-		blah = songRow['title'] + '\n'+ songRow['artist']
-		growlCommand = ['growlnotify', 'Playing: ', '-i', songRow['location'].split('.')[-1], '-m', blah ]
-		subprocess.Popen(growlCommand).communicate() #sends growl notification. songRow['location'].split('.')[-1] prepares the extension for the icon to appear in the notification. 
-		self.primePlayer(location)
+		self.primePlayer(location, playType)
 		self.play()
 	def playAList(self, listname, index=0, temp=False):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
@@ -318,8 +315,7 @@ class player(object):
 
 	def playRandom(self, startWith=None):
 		if not startWith == None:
-			self.primePlayer(self.dbName.getLocationByID(startWith))
-			self.play()
+			self.playLocation(self.dbName.getLocationByID(startWith))
 		else:
 			songID = self.dbName.getRandomID()
 			self.playLocation(self.dbName.getLocationByID(songID), 'random')
@@ -338,13 +334,17 @@ class player(object):
 		bus.add_signal_watch()
 		bus.connect("message", self.on_message)
 		self.time_format = gst.Format(gst.FORMAT_TIME)
-		self.changeTrack = False
-		self.playnow = False
-		self.playtype = 'random'
+		self.growl = Growl.GrowlNotifier(applicationName=appName, notifications=['Song change'], defaultNotifications=['Song change'])
+		self.growl.register()
 		
-	def primePlayer(self, location, playtype='random'):
+	def primePlayer(self, location, playtype):
 		self.unprimePlayer()
 		formattedLocation = 'file://' + urllib.pathname2url(location.encode('utf-8'))
+		songRow = self.dbName.lookupSongByLocation(location)
+		self.dbName.pprintByLocation(location)
+		self.playType = playtype
+		blah = songRow['title'] + '\n'+ songRow['artist']
+		self.growl.notify(noteType='Song change', title='Playing song:', description=blah, icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
 		self.player.set_property("uri", formattedLocation)
 		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
 		self.threadName.daemon = True
@@ -357,7 +357,7 @@ class player(object):
 		self.player.set_state(gst.STATE_NULL)
 		try:
 			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
-		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread? Oh well, I don't care!
+		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread?! Oh well, I don't care! It works!
 			pass
 		self.threadName = None
 		return
