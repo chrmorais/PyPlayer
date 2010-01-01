@@ -137,6 +137,8 @@ class commandShell(object):
 					self.plyr.pause()
 				elif userInput[0] == 'next':
 					self.plyr.playNext()
+				elif userInput[0] == 'pause':
+					self.plyr.unprimePlayer()
 
 				#=============================================================================================
 				#=========== QUITTING
@@ -355,7 +357,7 @@ class player(object):
 		self.player.set_state(gst.STATE_NULL)
 		try:
 			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
-		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a  Oh well
+		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread? Oh well, I don't care!
 			pass
 		self.threadName = None
 		return
@@ -412,30 +414,12 @@ class player(object):
 						if self.currentlyPlaying == None:
 							print 'Nothing playing, quitting'
 						else:
+							self.playNext()
 							break
-				
 				else:
 					break
 			except TypeError:
 				print 'lolwat'
-		#	elif self.changeTrack == True:
-		#		lastPlayed = self.currentlyPlaying
-		#		self.unprimePlayer()
-		#		if self.playType == 'playlist':
-		#			nextSongIndex = self.currentList.playlist.index(lastPlayed['location']) + 1
-		#			print nextSongIndex
-		#			print len(self.currentList.playlist)
-		#			if nextSongIndex >= len(self.currentList.playlist):
-		#				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
-		#					self.playRandom()
-		#				else:
-		#					self.playAList(self.currentList, index=0)
-		#			else:
-		#				self.playAList(self.currentList, index=nextSongIndex)
-		#		elif self.playType == 'one':#thats all, folks~~!
-		#			return
-		#		else:#either random or invalid playtype. Honestly, I don't care
-		#			self.playRandom()
 				
 	
 	def secondsToReadableTime(self, timeInt, divide):
