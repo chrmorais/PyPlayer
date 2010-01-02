@@ -194,7 +194,7 @@ class commandShell(object):
 								searchQuery = rawInput[4:end-1]
 								results = self.db.searchForSongs(searchQuery)
 								for item in results:
-									self.currentPlaylists[playlistName].add(item['location'], temp=False)
+									self.currentPlaylists[playlistName].add(item['location'], load=False)
 					except (IndexError):
 						print"Usage: add <ID or search string> to <playlist name>"
 						print"Playlist is created if not already existing."
