@@ -378,8 +378,6 @@ class player(object):
 		self.unprimePlayer()
 		if self.playType == 'playlist':
 			nextSongIndex = self.currentList.playlist.index(lastPlayed['location']) + 1
-			print nextSongIndex
-			print len(self.currentList.playlist)
 			if nextSongIndex >= len(self.currentList.playlist):
 				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
