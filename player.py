@@ -112,11 +112,7 @@ class commandShell(object):
 							self.plyr.playRandom()
 						elif userInput[1] in self.currentPlaylists:
 							#is it a playlist name?
-							try:
-								if userInput[1] in self.currentPlaylists:
-									self.plyr.playAList(self.currentPlaylists[userInput[1]])
-							except IndexError:
-								print"Usage: play <ID, playlist or search query>"
+							self.plyr.playAList(self.currentPlaylists[userInput[1]])
 						else:#must be a search query, let's make a temporary playlist with the results and play that
 							randomName = ['temp', unicode(random.getrandbits(50))]
 							randomName = ''.join(randomName)
@@ -126,7 +122,7 @@ class commandShell(object):
 								self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 								for song in searchResults:
 									self.currentPlaylists[randomName].add(song['location'])
-								self.plyr.playAList(self.currentPlaylists[randomName], True)
+								self.plyr.playAList(self.currentPlaylists[randomName], temp=True)
 
 							
 
@@ -194,7 +190,7 @@ class commandShell(object):
 								searchQuery = rawInput[4:end-1]
 								results = self.db.searchForSongs(searchQuery)
 								for item in results:
-									self.currentPlaylists[playlistName].add(item['location'], False)
+									self.currentPlaylists[playlistName].add(item['location'], temp=False)
 					except (IndexError):
 						print"Usage: add <ID or search string> to <playlist name>"
 						print"Playlist is created if not already existing."
