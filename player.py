@@ -214,8 +214,9 @@ class commandShell(object):
 							songID = rawInput[4:start].strip()
 							plName = rawInput[start+5:].strip()
 							for item in self.currentPlaylists[plName].playlist:
-								if self.db.lookupSongByLocation(item)['ID'] == int(songID):
-									print item, 'deleted'
+								songObject = self.db.lookupSongByLocation(item)
+								if songObject['ID'] == int(songID):
+									print songObject['title'], 'removed from ', plName
 									self.currentPlaylists[plName].playlist.remove(item)
 									
 						else:
