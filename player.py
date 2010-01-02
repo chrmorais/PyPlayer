@@ -171,9 +171,12 @@ class commandShell(object):
 					try:
 						end = rawInput.find('to')#Some shitty parsing here, assumes everything between the 4th character and the word "to" is the search query or ID,
 						# and everything past the word "to" (end+3) is the playlist name. Hey, it works
-						if end == -1:
+
+						if end == -1: #"to" not found, it's necessary!
 							print"Usage: add <ID or search string> to <playlist name>"
 							print"Playlist is created if not already existing."
+						elif rawInput[end+2:end+3] != ' ':
+							print "Remember to add a space beside \"to\""
 						else:
 							playlistName = rawInput[end+3:len(rawInput)]#THis grabs the playlist name in a string.
 							if playlistName == '' or not playlistName:
