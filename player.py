@@ -389,14 +389,10 @@ class player(object):
 			self.playRandom()
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
-		#while True:
-			#if not self.changeTrack:
 		while True:
 			try:
 				time.sleep(.5)
 				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
-		
-			#	oldPosition = self.secondsToReadableTime(self.player.query_position(self.time_format, None)[0], True)
 				break
 			except gst.QueryError:
 			#	print '\nUnable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 2 seconds.'
@@ -416,7 +412,9 @@ class player(object):
 						else:
 							self.playNext()
 							break
-				else:
+				elif gst.STATE_PAUSED == self.player.get_state()[1]: 
+					pass#Don't die during pause
+				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
 					break
 			except TypeError:
 				print 'lolwat'
