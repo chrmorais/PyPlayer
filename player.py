@@ -29,6 +29,7 @@ import time
 import datetime
 import Growl
 
+spam = True
 appName = 'PyPlayer'
 lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
 	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
@@ -114,15 +115,18 @@ class commandShell(object):
 							#is it a playlist name?
 							self.plyr.playAList(self.currentPlaylists[userInput[1]])
 						else:#must be a search query, let's make a temporary playlist with the results and play that
+							#pdb.set_trace()
 							randomName = ['temp', unicode(random.getrandbits(50))]
 							randomName = ''.join(randomName)
 							searchQuery = rawInput[5:]
 							searchResults = self.db.searchForSongs(searchQuery)
-							if not searchResults == [] or searchResults == None:
+							if not searchResults == [] or not searchResults == None:
 								self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 								for song in searchResults:
 									self.currentPlaylists[randomName].add(song['location'])
 								self.plyr.playAList(self.currentPlaylists[randomName], temp=True)
+							else:
+								print 'No results found, try harder.'
 
 							
 
@@ -308,7 +312,7 @@ class player(object):
 	def playAList(self, listname, index=0, temp=False):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
 		if index == 0:#only print entire playlist when beginning to play it
-			print listname
+			listname.pprint()
 		self.currentList = listname
 		self.playLocation(listname.playlist[index], 'playlist')
 
@@ -404,7 +408,8 @@ class player(object):
 					pos_int = self.player.query_position(self.time_format, None)[0]
 					#DurationString = self.secondsToReadableTime(songlength, False)
 					PositionString = self.secondsToReadableTime(pos_int, True)
-					print self.currentlyPlaying['title'], ': ', PositionString, DurationString
+					if spam:
+						print self.currentlyPlaying['title'], ': ', PositionString, DurationString
 					if DurationString == PositionString:
 						if self.currentlyPlaying == None:
 							print 'Nothing playing, quitting'
