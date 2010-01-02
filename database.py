@@ -196,7 +196,8 @@ class database(object):
 	def addItemByLocation(self, location):
 		sess = self.sessionMaker()
 		item = scanner.song(location)
-		insertSong = songfromdb(item.meta['title'], item.meta['album'], item.meta['artist'], item.meta['date'], item.meta['genre'], item.meta['location'], item.meta['length'])
+		songID = sess.query(songfromdb).count() + 1
+		insertSong = songfromdb(songID, item.meta['title'], item.meta['album'], item.meta['artist'], item.meta['date'], item.meta['genre'], item.meta['location'], item.meta['length'])
 		sess.add(insertSong)
 		sess.commit()
 		sess.close()
