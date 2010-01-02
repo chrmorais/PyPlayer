@@ -230,7 +230,7 @@ class commandShell(object):
 					if not self.currentPlaylists:
 						print 'No playlists loaded.'
 					for item in self.currentPlaylists:
-						print self.currentPlaylists[item]
+						self.currentPlaylists[item].pprint()#.encode('utf-8')
 				
 				#=============================================================================================
 				#=========== SAVE/LOAD PLAYLISTS
