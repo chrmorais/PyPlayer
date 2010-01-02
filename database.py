@@ -154,11 +154,11 @@ class database(object):
 		if not songRow:
 			return 'Song not found.'
 		else:
-			returnString =  'ID: ' + str(songRow.ID) + ' | ' + \
+			returnString =  'ID: ' + str(songRow.ID).encode('utf-8') + ' | ' + \
 			'Title: ' + songRow.title.encode('utf-8') + ' | ' + \
 			'Album: ' + songRow.album.encode('utf-8') + ' | ' + \
 			'Artist: ' + songRow.artist.encode('utf-8') + ' | ' + \
-			'Length: ' + str(songRow.length)
+			'Length: ' + str(songRow.length).encode('utf-8')
 			sess.commit()
 			sess.close()
 			return returnString
@@ -173,7 +173,6 @@ class database(object):
 			sess.close()
 			return 'Song not found.'
 		else:
-			print songRow.length
 			returnString =  'ID: ' + str(songRow.ID).encode('utf-8') + ' | ' + \
 			'Title: ' + songRow.title.encode('utf-8') + ' | ' + \
 			'Album: ' + songRow.album.encode('utf-8') + ' | ' + \
@@ -210,21 +209,17 @@ class playlist(object):
 		self.playlist = []
 		self.db = dbName
 		self.plName = name
-	def __str__(self):
+	def pprint(self):
 		"""docstring for __str__"""
-		returnList = []
-		returnList.append(self.plName.center(62, '='))
-		returnList.append('\n')
+		returnString = ''
+		print self.plName.center(62, '=')
+#		print '\n'
 		for item in self.playlist:
-			stringToAppend = self.db.pprintByLocation(item)#.encode('utf-8')
-			print stringToAppend
-			returnList.append(stringToAppend)
-			returnList.append('\n')
+			print self.db.pprintByLocation(item).decode('utf-8')
+#			print '\n'
 		
-		returnList.append('==============================================================')
-		for item in returnList:
-			item = item.encode('utf-8')
-		return ''.join(returnList)
+		print '=============================================================='
+		return ''
 	def add(self, songLoc, load=True):
 		if isinstance(songLoc, basestring):
 			if songLoc in self.playlist:
