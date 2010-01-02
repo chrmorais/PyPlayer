@@ -395,7 +395,7 @@ class player(object):
 				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
 				break
 			except gst.QueryError:
-			#	print '\nUnable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 2 seconds.'
+			#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 2 seconds.
 				DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 2, False)
 				break
 		while True:
@@ -416,8 +416,10 @@ class player(object):
 					pass#Don't die during pause
 				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
 					break
-			except TypeError:
-				print 'lolwat'
+				else:#print state if not caught!
+					self.player.get_state()[1]
+			except:
+				print 'Error detected: '
 				
 	
 	def secondsToReadableTime(self, timeInt, divide):
@@ -443,9 +445,7 @@ class player(object):
 
 
 if __name__ == "__main__":
-	
 	shell = commandShell()
-
 	shell.createShell()
 
 	

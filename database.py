@@ -22,6 +22,7 @@ import scanner
 import sqlalchemy
 import sqlalchemy.ext.declarative as dec
 from xml.etree.ElementTree import parse
+from xml.parsers.expat import ExpatError
 decBase = dec.declarative_base()
 class songfromdb(decBase):
 	__tablename__ = 'library'
@@ -172,11 +173,12 @@ class database(object):
 			sess.close()
 			return 'Song not found.'
 		else:
-			returnString =  'ID: ' + str(songRow.ID) + ' | ' + \
+			print songRow.length
+			returnString =  'ID: ' + str(songRow.ID).encode('utf-8') + ' | ' + \
 			'Title: ' + songRow.title.encode('utf-8') + ' | ' + \
 			'Album: ' + songRow.album.encode('utf-8') + ' | ' + \
 			'Artist: ' + songRow.artist.encode('utf-8') + ' | ' + \
-			'Length: ' + str(songRow.length)
+			'Length: ' + str(songRow.length).encode('utf-8')
 			sess.commit()
 			sess.close()
 			return returnString
@@ -214,10 +216,14 @@ class playlist(object):
 		returnList.append(self.plName.center(62, '='))
 		returnList.append('\n')
 		for item in self.playlist:
-			returnList.append(self.db.pprintByLocation(item).encode('utf-8'))
+			stringToAppend = self.db.pprintByLocation(item)#.encode('utf-8')
+			print stringToAppend
+			returnList.append(stringToAppend)
 			returnList.append('\n')
 		
 		returnList.append('==============================================================')
+		for item in returnList:
+			item = item.encode('utf-8')
 		return ''.join(returnList)
 	def add(self, songLoc, load=True):
 		if isinstance(songLoc, basestring):
@@ -256,6 +262,9 @@ class playlist(object):
 			tree = parse(location)
 		except IOError:
 			return 'File not found'
+		except ExpatError:
+			os.remove(location)
+			return 'Invalid file'
 		root = tree.getroot()
 		pl = self.playlist
 		for item in root.getiterator('{http://xspf.org/ns/0/}location'):
