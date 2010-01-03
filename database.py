@@ -223,6 +223,8 @@ class playlist(object):
 		return ''
 	def add(self, songLoc, load=True):
 		if isinstance(songLoc, basestring):
+			if isinstance(songLoc, unicode):
+				songLoc = songLoc.encode('utf-8')
 			if songLoc in self.playlist:
 				print "Duplicate Entry", songLoc.split('/')[-1]
 			else:
@@ -244,7 +246,9 @@ class playlist(object):
 		xml.start('trackList')
 
 		for line in self.playlist:
-			url = 'file://' + urllib.pathname2url(line.encode('utf-8'))
+			if isinstance(line, unicode):
+				line = line.encode('utf-8')
+			url = 'file://' + urllib.pathname2url(line)
 			xml.start('track')
 			xml.elem('location', url)
 			xml.end() # track

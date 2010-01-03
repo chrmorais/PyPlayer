@@ -343,12 +343,15 @@ class player(object):
 		
 	def primePlayer(self, location, playtype):
 		self.unprimePlayer()
-		formattedLocation = 'file://' + urllib.pathname2url(location.encode('utf-8'))
+		print type(location)
+		if isinstance(location, unicode):
+			location = location.encode('utf-8')
+		formattedLocation = 'file://' + urllib.pathname2url(location)
 		songRow = self.dbName.lookupSongByLocation(location)
 		self.dbName.pprintByLocation(location)
 		self.playType = playtype
 		blah = songRow['title'] + '\n'+ songRow['artist']
-		self.growl.notify(noteType='Song change', title='Playing song:', description=blah, icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
+		self.growl.notify(noteType='Song change', title=songRow['title'], description=songRow['album'], icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
 		self.player.set_property("uri", formattedLocation)
 		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
 		self.threadName.daemon = True
@@ -397,11 +400,19 @@ class player(object):
 				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
 				break
 			except gst.QueryError:
-			#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 2 seconds.
-				DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 2, False)
+			#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 1 second.
+				try:
+					DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 1, False)
+				except TypeError:
+					DurationString = None
 				break
 		while True:
 			try:			
+				if DurationString == None:
+					print 'Unable to calculate duration of song. Stopping playback.'
+					print self.currentlyPlaying
+					self.unprimePlayer
+					break
 				time.sleep(1)
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
@@ -421,7 +432,7 @@ class player(object):
 					break
 				else:#print state if not caught!
 					self.player.get_state()[1]
-			except:
+			except OSError:
 				print 'Error detected: '
 				
 	
