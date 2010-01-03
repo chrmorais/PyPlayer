@@ -343,20 +343,19 @@ class player(object):
 		
 	def primePlayer(self, location, playtype):
 		self.unprimePlayer()
-		print type(location)
 		if isinstance(location, unicode):
 			location = location.encode('utf-8')
 		formattedLocation = 'file://' + urllib.pathname2url(location)
 		songRow = self.dbName.lookupSongByLocation(location)
-		self.dbName.pprintByLocation(location)
+
 		self.playType = playtype
-		blah = songRow['title'] + '\n'+ songRow['artist']
 		self.growl.notify(noteType='Song change', title=songRow['title'], description=songRow['album'], icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
+		self.currentlyPlaying = self.dbName.lookupSongByLocation(location)
 		self.player.set_property("uri", formattedLocation)
 		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
 		self.threadName.daemon = True
 		self.threadName.start()
-		self.currentlyPlaying = self.dbName.lookupSongByLocation(location)
+
 		
 	def unprimePlayer(self):
 		
@@ -406,6 +405,8 @@ class player(object):
 				except TypeError:
 					DurationString = None
 				break
+		time.sleep(1)
+		print '\nPlaying: ', self.dbName.pprintByLocation(self.currentlyPlaying['location'])
 		while True:
 			try:			
 				if DurationString == None:
@@ -416,10 +417,14 @@ class player(object):
 				time.sleep(1)
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
-					#DurationString = self.secondsToReadableTime(songlength, False)
 					PositionString = self.secondsToReadableTime(pos_int, True)
 					if spam:
-						print self.currentlyPlaying['title'], ': ', PositionString, DurationString
+						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\r'
+						sys.stdout.write('                                                                                  \r')
+						sys.stdout.flush()
+						sys.stdout.write(stringToWrite)
+						sys.stdout.flush()
+						oldString = stringToWrite
 					if DurationString == PositionString:
 						if self.currentlyPlaying == None:
 							print 'Nothing playing, quitting'
