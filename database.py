@@ -66,17 +66,13 @@ class database(object):
 		for item in data:
 			songObj = songfromdb(songID, item[0], item[1], item[2], item[3], item[4], item[5], item[6])
 			songID += 1
-			print songObj
 			sess.add(songObj)
 		sess.commit()
 		sess.close()
-#	def endSession(self):
-#		self.conn.commit()
 	def killAll(self):
 		sess = self.sessionMaker()
 		for item in sess.query(songfromdb).all():
 			sess.delete(item)
-		print sess.query(songfromdb).count()
 		sess.commit()
 		sess.close()
 		sess.close()

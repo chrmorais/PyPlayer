@@ -71,7 +71,7 @@ class commandShell(object):
 		self.plyr = player(self.db, self)
 		self.dir = workingDir
 		self.musicDir = musicDir
-		self.scnr = scanner.scanMachine()
+		self.scnr = scanner.scanMachine(self.db)
 		print 'Scanning playlists'
 		self.scanForPlaylists()
 		print 'Scanning for changes to music'
@@ -298,7 +298,14 @@ class commandShell(object):
 				#=========== 'DEBUGGING'
 				#=============================================================================================
 				elif userInput[0] == 'crash':
-					raise 'sup bro'
+					raise 'sup bro'\
+				#=============================================================================================
+				#=========== 'DEBUGGING'
+				#=============================================================================================
+				elif userInput[0] == 'rescan':
+					print 'Remaking library'
+					songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+					self.scnr.addToDatabase(songList)
 			except KeyboardInterrupt:
 				print
 				pass

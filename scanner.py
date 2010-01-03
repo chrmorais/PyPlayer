@@ -17,8 +17,6 @@ from mutagen.oggvorbis import OggVorbis
 from mutagen.mp3 import MP3
 import database
 
-searchPath = u'/private/var/root/Music/Local Music Lib/iTunes Media/Music'
-dbLocation = u'sqlite:////private/var/root/Working/PyPlayer2/songBase.sqlite'
 class song(object):
 	'''Class that reads and contains metadata about a media file.'''
 	def __init__(self, location):
@@ -78,6 +76,8 @@ class song(object):
 		
 
 class scanMachine(object):
+	def __init__(self, dbName):
+		self.db = dbName
 	def scanForFiles(self, startDirectory, fileTypes, dontvisit=None):
 		"""scans a selected directory downwards recursively for all files of a specified type.
 		Arguments:
@@ -109,16 +109,15 @@ class scanMachine(object):
 	def addToDatabase(self, songList):
 		'''Sends the selected songs to a database, destroying anything before it.
 		Pass a list of filenames to add.'''	
-		db = database.database(dbLocation)
-		db.killAll()
+		self.db.killAll()
 		print 'Database primed and ready, time to parse some music!'
-		dbInsertList = []
+		self.dbInsertList = []
 		for item in songList:
 			songdata = song(item)
-			dbInsertList.append((songdata.meta['title'], songdata.meta['album'], songdata.meta['artist'], songdata.meta['date'], songdata.meta['genre'], songdata.meta['location'], songdata.meta['length']))
-		db.insertData(dbInsertList)
-		sess = db.sessionMaker()
-		print sess.query(database.songfromdb).count(), ' songs in the library.'
+			self.dbInsertList.append((songdata.meta['title'], songdata.meta['album'], songdata.meta['artist'], songdata.meta['date'], songdata.meta['genre'], songdata.meta['location'], songdata.meta['length']))
+		self.db.insertData(self.dbInsertList)
+		sess = self.db.sessionMaker()
+		print sess.query(database.songfromself.db).count(), ' songs in the library.'
 		sess.commit()
 
 def main():
@@ -126,7 +125,8 @@ def main():
 	songList = scanr.scanForFiles(startDirectory=searchPath, fileTypes=[u'mp3', u'ogg', u'flac'])
 	scanr.addToDatabase(songList)
 if __name__ == '__main__':
-	main()
+	print 'Don\'t run me! I\'m just a module file! Run player.py and type \"rescan\" to remake the db!'
+#	main()
 
 #the graveyard
 #	self.trackmetas2ID3 = { 
