@@ -4,8 +4,6 @@
 """
 database.py
 
-Created by Mitchell Ferguson on 2009-12-15.
-Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 """
 
 import sys
@@ -50,33 +48,56 @@ class songfromdb(decBase):
 		return returnstring
 
 class database(object):
+	def isDBThere(self):
+		sess = self.sessionMaker()
+		try:
+			results = sess.query(songfromdb).count()
+			if results < 1:
+				return False
+			return True
+		except sqlalchemy.exc.OperationalError:
+			return False
+		finally:
+			sess.commit()
+			sess.close()
 	def __init__(self, dbLocation):
 		self.conn = sqlalchemy.create_engine(dbLocation)
 		self.sessionMaker = sqlalchemy.orm.sessionmaker(bind=self.conn)
+		self.metadata = decBase.metadata
 
 	def __str__(self):
 		sess = self.sessionMaker()
 		for song in sess.query(songfromdb):
 			print song
+
 	def insertData(self, data):
 		"""inserts a list of items to the database. Pass in a list of song dataz, [[title, album, artist, year, genre, location, length], [title...]]
 		This function creates the database if necessary."""
 		sess = self.sessionMaker()
-		songID = sess.query(songfromdb).count() + 1
+		try:
+			songID = sess.query(songfromdb).count() + 1
+		except sqlalchemy.exc.OperationalError:
+			songID = 1
+		insertList = []
 		for item in data:
-			songObj = songfromdb(songID, item[0], item[1], item[2], item[3], item[4], item[5], item[6])
+			insertList.append(songfromdb(songID, item[0], item[1], item[2], item[3], item[4], item[5], item[6]))
 			songID += 1
-			sess.add(songObj)
+		sess.add_all(insertList)
 		sess.commit()
 		sess.close()
 	def killAll(self):
 		sess = self.sessionMaker()
-		for item in sess.query(songfromdb).all():
-			sess.delete(item)
+		try:
+			for item in sess.query(songfromdb).all():
+				sess.delete(item)
+		except sqlalchemy.exc.OperationalError:
+			pass
 		sess.commit()
 		sess.close()
-		sess.close()
 		print u'Destruction complete.'
+	#def noOfSongs(self):
+	#	sess = self.sessionMaker()
+	#	sess.query()
 	def lookupSongByID(self, songID):
 		sess = self.sessionMaker()
 	 	result = sess.query(songfromdb).filter(songfromdb.ID == int(songID)).one()

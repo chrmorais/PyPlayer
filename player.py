@@ -68,6 +68,7 @@ class commandShell(object):
 		self.exit = False
 		self.currentPlaylists = dict()
 		self.db = db = database.database(dbLocation)
+
 		self.plyr = player(self.db, self)
 		self.dir = workingDir
 		self.musicDir = musicDir
@@ -76,14 +77,18 @@ class commandShell(object):
 		self.scanForPlaylists()
 		print 'Scanning for changes to music'
 		changes = self.scanForChanges()
-		if changes > 0:
-			print 'Changes detected in music library. Recommend rescan.'
+			
 	def scanForChanges(self):
-		"""docstring for scanForChanges"""
+		"""Checks the current music folder vs. a pickled old db list. Any changes are merged in automatically."""
 		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
 		picklePath = os.path.join(self.dir, 'musicDirData.pickle')
 		newSongs = []
 		deletedSongs = []
+		if not self.db.isDBThere():
+			print 'Database not there!~\nRemaking library'
+			self.db.metadata.create_all(self.db.conn)
+			remakeList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+			self.scnr.addToDatabase(remakeList)
 		if not glob.glob(picklePath):
 			cPickle.dump(songList, open(picklePath, 'w+b'), 2)
 		else:#do comparison, comparison file exists
@@ -97,7 +102,7 @@ class commandShell(object):
 					print 'Attempting removal of ', item
 					print self.db.deleteItem(item)
 			cPickle.dump(songList, open(picklePath, 'w+b'), 2)
-		return len(newSongs) + len(deletedSongs)
+		return 
 	def scanForPlaylists(self):
 		"""Scans the current working directory (ie the script directory) recursively for playlists and loads them."""
 		listOfPlaylists = self.scnr.scanForFiles(startDirectory=self.dir, fileTypes=['xspf'], dontvisit=[])

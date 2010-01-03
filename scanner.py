@@ -107,7 +107,7 @@ class scanMachine(object):
 				break
 		return toBeScanned
 	def addToDatabase(self, songList):
-		'''Sends the selected songs to a database, destroying anything before it.
+		'''Sends the selected songs to the database, destroying anything before it.
 		Pass a list of filenames to add.'''	
 		self.db.killAll()
 		print 'Database primed and ready, time to parse some music!'
@@ -117,7 +117,7 @@ class scanMachine(object):
 			self.dbInsertList.append((songdata.meta['title'], songdata.meta['album'], songdata.meta['artist'], songdata.meta['date'], songdata.meta['genre'], songdata.meta['location'], songdata.meta['length']))
 		self.db.insertData(self.dbInsertList)
 		sess = self.db.sessionMaker()
-		print sess.query(database.songfromself.db).count(), ' songs in the library.'
+		print sess.query(database.songfromdb).count(), 'songs in the library.'
 		sess.commit()
 
 def main():
