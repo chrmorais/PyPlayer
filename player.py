@@ -31,14 +31,19 @@ import Growl
 import termios
 import fcntl
 import struct
+import yaml
 
-spam = True
-appName = 'PyPlayer'
-lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
-	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
-workingDir = u'/private/var/root/Working/PyPlayer2'
-dbLocation = 'sqlite:///' + os.path.join(workingDir, 'songBase.sqlite')
-musicDir = u'/private/var/root/Music/Local Music Lib/iTunes Media/Music'
+#lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
+#	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
+runType = 'debug' #currently does nothing much, it's a placeholder! :O
+config = yaml.load(open(os.path.join(os.getcwdu() + '/config.yml')))[runType]
+spam = config['spam']
+appName = config['appName']
+workingDir = config['workingDir']
+musicDir = config['musicDir']
+dbFileName = config['dbFileName']
+dbLocation = 'sqlite:///' + os.path.join(workingDir, dbFileName)
+
 def getHeightAndWidth():
 	"""Returns the size of the terminal in the format rows, cols, x pixels, y pixels"""
 	s = struct.pack("HHHH", 0, 0, 0, 0)
@@ -431,7 +436,7 @@ class player(object):
 					if spam:
 						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\r'
 						termSize = getHeightAndWidth()
-						sys.stdout.write((' ' * termSize[1]) + '\r')
+						sys.stdout.write((' ' * termSize[1]) + '\r')#what we do here is clear the entire line. 
 						sys.stdout.flush()
 						sys.stdout.write(stringToWrite)
 						sys.stdout.flush()
