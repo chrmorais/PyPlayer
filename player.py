@@ -36,7 +36,13 @@ import yaml
 #lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
 #	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
 runType = 'debug' #currently does nothing much, it's a placeholder! :O
-config = yaml.load(open(os.path.join(os.getcwdu() + '/config.yml')))[runType]
+
+try:
+	config = yaml.load(open(os.path.join(os.getcwdu() + '/config.yml')))[runType]
+except OSError:
+	print 'Config file not found. Give it back!'
+	print 'Lost it? Find a copy on <url here!>'
+	quit()
 spam = config['spam']
 appName = config['appName']
 workingDir = config['workingDir']
