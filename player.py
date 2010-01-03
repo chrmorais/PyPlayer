@@ -38,10 +38,16 @@ import yaml
 runType = 'debug' #currently does nothing much, it's a placeholder! :O
 
 try:
-	config = yaml.load(open(os.path.join(os.getcwdu() + '/config.yml')))[runType]
-except OSError:
+	fileObj = open(os.path.join(os.getcwdu() + '/config.yml'))
+except IOError:
 	print 'Config file not found. Give it back!'
-	print 'Lost it? Find a copy on <url here!>'
+	print 'Lost it? Find a copy on http://github.com/ripdog/PyPlayer/raw/master/config.yml'
+	quit()
+try:
+	config = yaml.load(fileObj)[runType]
+except:#Too many errors to catch individually. In any case, if this fails, the file is likely borked.
+	print 'Config file corrupt!'
+	print 'Grab a new copy from http://github.com/ripdog/PyPlayer/raw/master/config.yml'
 	quit()
 spam = config['spam']
 appName = config['appName']

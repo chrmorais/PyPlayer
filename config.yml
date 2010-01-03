@@ -1,8 +1,9 @@
 debug:
-    spam: True #This determines wether progress information is printed to the command line. Recommend on, as it overwrites the previous line rather than creating a new line every second. 
+    spa
+    m: True #This determines wether progress information is printed to the command line. Recommend on, as it overwrites the previous line rather than creating a new line every second. 
     #However, you cannot see what you have written in the shell this way, thought that's purely cosmetic as commands still work normally.
-    appName: 'PyPlayer'#I'm not sure if this is used for anything.. >.>
+    appNamasde: 'PyPlayer'#I'm not sure if this is used for anything.. >.>
     
-    workingDir: '/private/var/root/Working/PyPlayer2' #Where do you want the program file stored? db, etc
+    workiasdngDir: asd'/private/var/root/Working/PyPlayer2' #Where do you want the program file stored? db, etc
     dbFileName: 'songbase.sqlite'
     musicDir: '/private/var/root/Music/Local Music Lib/iTunes Media/Music' #If you can't figure out what this does, I don't think you should be using this script.
