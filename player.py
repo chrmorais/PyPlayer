@@ -28,6 +28,9 @@ import threading
 import time
 import datetime
 import Growl
+import termios
+import fcntl
+import struct
 
 spam = True
 appName = 'PyPlayer'
@@ -36,6 +39,13 @@ lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well,
 workingDir = u'/private/var/root/Working/PyPlayer2'
 dbLocation = 'sqlite:///' + os.path.join(workingDir, 'songBase.sqlite')
 musicDir = u'/private/var/root/Music/Local Music Lib/iTunes Media/Music'
+def getHeightAndWidth():
+	"""Returns the size of the terminal in the format rows, cols, x pixels, y pixels"""
+	s = struct.pack("HHHH", 0, 0, 0, 0)
+	fd_stdout = sys.stdout.fileno()
+	x = fcntl.ioctl(fd_stdout, termios.TIOCGWINSZ, s)
+	# rows, cols, x pixels, y pixels
+	return struct.unpack("HHHH", x)
 class commandShell(object):
 	def __init__(self):
 		self.exit = False
@@ -420,7 +430,8 @@ class player(object):
 					PositionString = self.secondsToReadableTime(pos_int, True)
 					if spam:
 						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\r'
-						sys.stdout.write('                                                                                  \r')
+						termSize = getHeightAndWidth()
+						sys.stdout.write((' ' * termSize[1]) + '\r')
 						sys.stdout.flush()
 						sys.stdout.write(stringToWrite)
 						sys.stdout.flush()
