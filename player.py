@@ -120,7 +120,10 @@ class commandShell(object):
 			try:
 				rawInput = None
 				userInput = None
-				rawInput = raw_input('Type a command >').lower()
+				if gst.STATE_PLAYING == self.plyr.player.get_state()[1]:
+					rawInput = raw_input('').lower()
+				else: 
+					rawInput = raw_input('Enter command >').lower()
 				self.interpretCommand(rawInput)
 				
 			except KeyboardInterrupt:

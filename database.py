@@ -146,6 +146,8 @@ class database(object):
 		if not query or query == '':
 			print 'Please enter search terms'
 			return None
+		if type(query) == str:
+			query = query.decode('utf-8')
 		query = query.lower()
 		query = '%' + query + '%'
 		sess = self.sessionMaker()
