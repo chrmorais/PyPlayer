@@ -462,9 +462,9 @@ class player(object):
 				if DurationString == None:
 					print 'Unable to calculate duration of song. Stopping playback.'
 					print self.currentlyPlaying
-					self.unprimePlayer
+					self.unprimePlayer()
 					break
-				time.sleep(1)
+				
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
 					PositionString = self.secondsToReadableTime(pos_int, True)
@@ -482,6 +482,7 @@ class player(object):
 						else:
 							self.playNext()
 							break
+					time.sleep(1)
 				elif gst.STATE_PAUSED == self.player.get_state()[1]: 
 					pass#Don't die during pause
 				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
