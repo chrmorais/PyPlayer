@@ -443,9 +443,10 @@ class player(object):
 			self.playRandom()
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
+		while not gst.STATE_PLAYING == self.player.get_state()[1]:
+			time.sleep(.1)
 		while True:
 			try:
-				time.sleep(.5)
 				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
 				break
 			except gst.QueryError:
@@ -455,7 +456,6 @@ class player(object):
 				except TypeError:
 					DurationString = None
 				break
-		time.sleep(1)
 		print '\nPlaying: ', self.dbName.pprintByLocation(self.currentlyPlaying['location'])
 		while True:
 			try:			
@@ -487,7 +487,7 @@ class player(object):
 				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
 					break
 				else:#print state if not caught!
-					self.player.get_state()[1]
+					print self.player.get_state()[1]
 			except OSError:
 				print 'Error detected: '
 				
