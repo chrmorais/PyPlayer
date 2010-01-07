@@ -459,11 +459,11 @@ class player(object):
 		print '\nPlaying: ', self.dbName.pprintByLocation(self.currentlyPlaying['location'])
 		while True:
 			try:			
-				if DurationString == None:
-					print 'Unable to calculate duration of song. Stopping playback.'
-					print self.currentlyPlaying
-					self.unprimePlayer()
-					break
+			#	if DurationString == None:
+			#		print 'Unable to calculate duration of song. Stopping playback.'
+			#		print self.currentlyPlaying
+			#		self.unprimePlayer()
+			#		break
 				
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
@@ -482,13 +482,13 @@ class player(object):
 						else:
 							self.playNext()
 							break
-					time.sleep(1)
 				elif gst.STATE_PAUSED == self.player.get_state()[1]: 
 					pass#Don't die during pause
 				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
 					break
 				else:#print state if not caught!
 					print self.player.get_state()[1]
+				time.sleep(1)
 			except OSError:
 				print 'Error detected: '
 				
