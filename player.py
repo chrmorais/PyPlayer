@@ -164,6 +164,7 @@ class commandShell(object):
 					#is it a playlist name?
 					self.plyr.playAList(self.currentPlaylists[userInput[1]])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
+				#IF NO RESULTS FOUND, DONT MAKE PLAYLIST
 					#pdb.set_trace()
 					randomName = ['temp', unicode(random.getrandbits(50))]
 					randomName = ''.join(randomName)

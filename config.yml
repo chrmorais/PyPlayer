@@ -5,4 +5,4 @@ debug:
     
     workingDir: '/private/var/root/Working/PyPlayer2' #Where do you want the program file stored? db, etc
     dbFileName: 'songbase.sqlite'
-    musicDir: '/private/var/root/Music/Local Music Lib/iTunes Media/Music' #If you can't figure out what this does, I don't think you should be using this script.
+    musicDir: '/private/var/root/Music/NewLib/iTunes Media/Music' #If you can't figure out what this does, I don't think you should be using this script.

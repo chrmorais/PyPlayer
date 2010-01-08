@@ -203,7 +203,8 @@ class database(object):
 	def deleteItem(self, location):
 		sess = self.sessionMaker()
 		#try:
-		self.lookupSongByLocation(location).delete()
+		result = sess.query(songfromdb).filter(songfromdb.location == location).one()
+		sess.delete(result)
 		sess.commit()
 		sess.close()
 		#except TypeError:#item is already gone from db
@@ -240,7 +241,7 @@ class playlist(object):
 		
 		print '=============================================================='
 		return ''
-	def add(self, songLoc, load=True):
+	def add(self, songLoc, load=True):#CHECK IF LOCATION IS VALID - SEARCH FOR FILENAME IF NOT; OR BUST SAFELY
 		if isinstance(songLoc, basestring):
 			if isinstance(songLoc, unicode):
 				songLoc = songLoc.encode('utf-8')

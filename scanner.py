@@ -84,27 +84,32 @@ class scanMachine(object):
 			startDirectory: Pass a unicode string of the full unescaped pathname of the directory to start scanning in.
 			fileTypes: Pass a tuple or list of filetypes to allow, unicode, no period (E.g. mp3 not .mp3)
 			dontvisit: Pass a tuple or list of directories to be ignored. Do not append a slash to the end of each path"""
-		dirStack = [startDirectory]
-		doNotVisit = []
-		if dontvisit:
-			for item in dontvisit:
-				doNotVisit.append(item)
-		toBeScanned = []
+			
+		try:
+			dirStack = [startDirectory]
+			doNotVisit = []
+			if dontvisit:
+				for item in dontvisit:
+					doNotVisit.append(item)
+			toBeScanned = []
 
-		while True:
-			try:
-				visitingNow = dirStack.pop()
-				if visitingNow not in doNotVisit:
-					os.chdir(visitingNow)
-					doNotVisit.append(visitingNow)
-					currentDir = os.listdir(os.getcwdu())
-					for item in currentDir:
-						if item.split('.')[-1] in fileTypes:
-							toBeScanned.append(os.path.join(os.getcwdu(), item))
-						elif os.path.isdir(item) and os.path.join(os.getcwdu(), item) not in doNotVisit:
-							dirStack.append(os.path.join(os.getcwdu(), item))
-			except IndexError:
-				break
+			while True:
+				try:
+					visitingNow = dirStack.pop()
+					if visitingNow not in doNotVisit:
+						os.chdir(visitingNow)
+						doNotVisit.append(visitingNow)
+						currentDir = os.listdir(os.getcwdu())
+						for item in currentDir:
+							if item.split('.')[-1] in fileTypes:
+								toBeScanned.append(os.path.join(os.getcwdu(), item))
+							elif os.path.isdir(item) and os.path.join(os.getcwdu(), item) not in doNotVisit:
+								dirStack.append(os.path.join(os.getcwdu(), item))
+				except IndexError:
+					break
+		except OSError:
+			print "Start directory not found/invalid. Check your config file!"
+			quit()
 		return toBeScanned
 	def addToDatabase(self, songList):
 		'''Sends the selected songs to the database, destroying anything before it.
