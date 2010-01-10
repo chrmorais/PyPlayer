@@ -28,8 +28,7 @@ class song(object):
 				self.file = EasyID3(location)
 				self.mp3 = MP3(location)
 			except ID3NoHeaderError:
-				print u'This file has no ID3 header!'
-				print location
+				pass
 			self.fileType = 'mp3'
 				
 		elif os.path.splitext(location)[1].lower() == '.flac':
