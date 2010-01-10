@@ -222,13 +222,27 @@ class database(object):
 		sess.commit()
 		sess.close()
 		return 'Added ' + item.meta['title']
-	def getListOfLocations(self):
-		"""returns a list of every song location in the database. For use in database comparison"""
+	def getListOfSongs(self, locations=False):
+		"""returns a list of every song in the database. For use in database comparison"""
 		sess = self.sessionMaker()
 		results = sess.query(songfromdb).all()
 		returnMe = []
-		for item in results:
-			returnMe.append(item.location)
+		for row in results:
+			if locations == True:
+				returnMe.append(row.location)
+			else:
+				try: 
+					longNess = int(row.length)
+				except ValueError:
+						longNess = 'Unknown'
+				returnMe.append({'ID':row.ID, \
+				'title':unicode(row.title).encode('utf-8'), \
+				'album':unicode(row.album).encode('utf-8'), \
+				'artist':unicode(row.artist).encode('utf-8'), \
+				'year':unicode(row.year).encode('utf-8'), \
+				'genre':unicode(row.genre).encode('utf-8'), \
+				'location':unicode(row.location).encode('utf-8'), \
+				'length':longNess})
 		sess.commit()
 		sess.close()
 		return returnMe
@@ -266,7 +280,7 @@ class playlist(object):
 			print "Please give me a string location!"
 	def saveToDisk(self, location, directory):
 		"""Saves the playlist to the chosen location in XSPF format."""
-		if location.startswith('temp'):
+		if location.startswith('temp') or location.startswith('shuffle'):
 			return "We don't save temporaries!"
 		location = os.path.join(directory, location)
 		xml = XmlWriter(io.open(location, 'w+b'), indentAmount='  ')

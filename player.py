@@ -86,13 +86,13 @@ class commandShell(object):
 			remakeList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
 			self.scnr.addToDatabase(remakeList)
 		else:#DB appears OK, let's compare and fix!
-			oldSongList = self.db.getListOfLocations()
+			oldSongList = self.db.getListOfSongs(locations=True)
 			for item in songList:
 				if item not in oldSongList:
 					print self.db.addItemByLocation(item)
 			for item in oldSongList:
 				if item not in songList:
-					print self.db.deleteItem(item)
+					print self.db.deleteItem(item['location'])
 		return 
 	def scanForPlaylists(self):
 		"""Scans the current working directory (ie the script directory) recursively for playlists and loads them."""
@@ -133,6 +133,7 @@ class commandShell(object):
 			play <search string>
 			add <ID or search string> to APlaylist
 			search <string>
+			next
 			play
 			pause
 			stop
@@ -164,7 +165,7 @@ class commandShell(object):
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
 							self.currentPlaylists[randomName].add(song['location'])
-						self.plyr.playAList(self.currentPlaylists[randomName], temp=True)
+						self.plyr.playAList(self.currentPlaylists[randomName])
 					else:#no results found, obviously
 						print 'No results found, try harder.'
 
@@ -181,6 +182,9 @@ class commandShell(object):
 			self.plyr.playNext()
 		elif userInput[0] == 'stop':
 			self.plyr.unprimePlayer()
+		elif userInput[0] == 'p':
+			print self.plyr.player.get_state()[1]
+			self.plyr.playPause()
 
 		#=============================================================================================
 		#=========== QUITTING
@@ -231,7 +235,7 @@ class commandShell(object):
 						self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
 						print "Created", playlistName
 					if userInput[1].isdigit():
-						self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]), False)
+						self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
 						
 					else:
 						searchQuery = rawInput[4:end-1]
@@ -314,9 +318,12 @@ class commandShell(object):
 		#=========== 'DEBUGGING'
 		#=============================================================================================
 		elif userInput[0] == 'crash':
-			raise 'sup bro'\
+			raise 'sup bro'
 		elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
-			
+			results = getListOfSongs()
+			for item in results:
+				if item['length'] == 'Unknown':
+					print 'unknown found! ', item
 		#=============================================================================================
 		#=========== RESCAN LIBRARY
 		#=============================================================================================
@@ -334,7 +341,7 @@ class commandShell(object):
 					break
 			if save:
 				saveLists = raw_input('Do you want to save your playlist(s)?')
-				if saveLists.lower() in ['y', 'yes', 'ok']:
+				if saveLists.lower().strip() in ['y', 'yes', 'ok']:
 					iterator = 0
 					for item in self.currentPlaylists.keys():
 						plName = self.currentPlaylists.keys()[iterator]
@@ -356,7 +363,7 @@ class player(object):
 		self.dbName.pprintByLocation(location)
 		self.primePlayer(location, playType)
 		self.play()
-	def playAList(self, listname, index=0, temp=False):
+	def playAList(self, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
 		if index == 0:#only print entire playlist when beginning to play it
 			listname.pprint()
@@ -364,6 +371,7 @@ class player(object):
 		self.playLocation(listname.playlist[index], 'playlist')
 
 	def playRandom(self, startWith=None):
+		self.playType = 'random'
 		if not startWith == None:
 			self.playLocation(self.dbName.getLocationByID(startWith))
 		else:
@@ -377,7 +385,8 @@ class player(object):
 	def __init__(self, dbName, cmdSh):
 		self.dbName = dbName
 		self.cmdSh = cmdSh
-		currentlyPlaying = None
+		self.currentList = None
+		self.currentlyPlaying = None
 		self.player = gst.element_factory_make("playbin", "player")
 		fakesink = gst.element_factory_make("fakesink", "fakesink")
 		bus = self.player.get_bus()
@@ -407,9 +416,13 @@ class player(object):
 
 		
 	def unprimePlayer(self):
-		
 		self.currentlyPlaying = None
 		self.player.set_state(gst.STATE_NULL)
+		try:
+			if not self.playType == 'playlist':
+				self.currentList == None
+		except AttributeError:
+			pass
 		try:
 			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
 		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread?! Oh well, I don't care! It works!
@@ -423,13 +436,18 @@ class player(object):
 	def pause(self):
 		self.player.set_state(gst.STATE_PAUSED)
 
+	def playPause(self):
+		if gst.STATE_PLAYING == self.player.get_state()[1]:#we're playing!
+			self.player.set_state(gst.STATE_PAUSED)
+		else:
+			self.player.set_state(gst.STATE_PLAYING)
 		
 	def playNext(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.playType == 'playlist':
 			nextSongIndex = self.currentList.playlist.index(lastPlayed['location']) + 1
-			if nextSongIndex >= len(self.currentList.playlist):#are we at the end of the playlist?
+			if nextSongIndex => len(self.currentList.playlist):#are we at the end of the playlist?
 				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
 				else:
