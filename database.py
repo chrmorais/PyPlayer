@@ -189,7 +189,6 @@ class database(object):
 		if type(snglocation) == str:
 			snglocation = unicode(snglocation, 'utf-8')
 		songRow = sess.query(songfromdb).filter(songfromdb.location == snglocation).one()
-
 		if not songRow:
 			sess.commit()
 			sess.close()
@@ -247,37 +246,36 @@ class database(object):
 		sess.close()
 		return returnMe
 
-class playlist(object):
+class playlist(list):
 	"""Internal representation of a list of songs.
 	For convenience (not having to type database name for every function call), playlists are tied to a database."""
 	def __init__(self, dbName, name):
-		self.playlist = []
 		self.db = dbName
 		self.plName = name
-	def pprint(self):
+	def __str__(self):
 		"""docstring for __str__"""
 		returnString = ''
+		#if not self.plName == 'random':
 		print self.plName.center(62, '=')
-#		print '\n'
-		for item in self.playlist:
+		for item in self:
+			print item
 			print self.db.pprintByLocation(item).decode('utf-8')
-#			print '\n'
-		
-		print '=============================================================='
-		return ''
-	def add(self, songLoc, load=True):#CHECK IF LOCATION IS VALID - SEARCH FOR FILENAME IF NOT; OR BUST SAFELY
+		return '=============================================================='
+		#return ''
+	def add(self, songLoc):#CHECK IF LOCATION IS VALID - SEARCH FOR FILENAME IF NOT; OR BUST SAFELY
 		if isinstance(songLoc, basestring):
 			if isinstance(songLoc, unicode):
 				songLoc = songLoc.encode('utf-8')
-			if songLoc in self.playlist:
-				print "Duplicate Entry", songLoc.split('/')[-1]
+			if songLoc in self:
+				pass
 			else:
-				self.playlist.append(songLoc)
-				if not load:
-					print 'Added ', self.db.pprintByLocation(songLoc)
+				self.append(songLoc)
+				print 'Added ', self.db.pprintByLocation(songLoc)
 					
 		else:
 			print "Please give me a string location!"
+
+	    
 	def saveToDisk(self, location, directory):
 		"""Saves the playlist to the chosen location in XSPF format."""
 		if location.startswith('temp') or location.startswith('shuffle'):
@@ -289,7 +287,7 @@ class playlist(object):
 		xml.start('playlist', { 'xmlns': 'http://xspf.org/ns/0/', 'version': '1' })
 		xml.start('trackList')
 
-		for line in self.playlist:
+		for line in self:
 			if isinstance(line, unicode):
 				line = line.encode('utf-8')
 			url = 'file://' + urllib.pathname2url(line)
@@ -314,7 +312,7 @@ class playlist(object):
 		for item in root.getiterator('{http://xspf.org/ns/0/}location'):
 			formattedPath = item.text[7:]
 			formattedPath = urllib.url2pathname(formattedPath).decode('utf-8')
-			self.add(formattedPath)
+			self.append(formattedPath)
 		return 'Load of ' + plName + ' complete'
 		
 

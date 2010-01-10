@@ -5,6 +5,10 @@
 #Command shell with regexes
 #ncurses interface
 #docstrings as-you-type
+#play previous
+#reimplement protection versus duplicate playlist items
+#defense against moved files referenced in saved playlists 
+#don't save the random playlist
 """
 player.py
 
@@ -32,8 +36,8 @@ import fcntl
 import struct
 import yaml
 
-#lolmessage = '''So, you ignored that STERN warning on the github page, eh? Well, I\'m very flattered, but you\'re in for a bumpy ride. Ok, heres what you need to do:
-#	rename PyPlayer.conf.example to PyPlayer.conf. Edit it, insert paths where directed.'''
+#So, you ignored that STERN warning on the github page, eh? Well, I'm very flattered, but you're in for a bumpy ride. Ok, heres what you need to do:
+#edit the config file, insert paths where directed. Install packages as necessary to fufill packages required for the above imports. Also toss in sqlite3. Then run me, song db should be created automatically.
 runType = 'debug' #currently does nothing much, it's a placeholder! :O
 
 try:
@@ -156,15 +160,14 @@ class commandShell(object):
 					#is it a playlist name?
 					self.plyr.playAList(self.currentPlaylists[userInput[1]])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
-					#pdb.set_trace()
 					randomName = ['temp', unicode(random.getrandbits(50))]
 					randomName = ''.join(randomName)
 					searchQuery = rawInput[5:]
 					searchResults = self.db.searchForSongs(searchQuery)
-					if not searchResults == [] and not searchResults == None:
+					if searchResults:#TEST IF THIS STILL WORKS
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
-							self.currentPlaylists[randomName].add(song['location'])
+							self.currentPlaylists[randomName].append(song['location'])
 						self.plyr.playAList(self.currentPlaylists[randomName])
 					else:#no results found, obviously
 						print 'No results found, try harder.'
@@ -235,13 +238,13 @@ class commandShell(object):
 						self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
 						print "Created", playlistName
 					if userInput[1].isdigit():
-						self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
+						self.currentPlaylists[playlistName].append(self.db.getLocationByID(userInput[1]))
 						
 					else:
 						searchQuery = rawInput[4:end-1]
 						results = self.db.searchForSongs(searchQuery)
 						for item in results:
-							self.currentPlaylists[playlistName].add(item['location'], load=False)
+							self.currentPlaylists[playlistName].append(item['location'])
 			except (IndexError):
 				print"Usage: add <ID or search string> to <playlist name>"
 				print"Playlist is created if not already existing."
@@ -260,11 +263,14 @@ class commandShell(object):
 				elif not start == -1 and userInput[1].isdigit():#removing a songID from a playlist
 					songID = rawInput[4:start].strip()
 					plName = rawInput[start+5:].strip()
-					for item in self.currentPlaylists[plName].playlist:
+					for item in self.currentPlaylists[plName]:
 						songObject = self.db.lookupSongByLocation(item)
 						if songObject['ID'] == int(songID):
 							print songObject['title'], 'removed from ', plName
-							self.currentPlaylists[plName].playlist.remove(item)
+							self.currentPlaylists[plName].remove(item)
+					if len(self.currentPlaylists[plName]) <= 0:
+						del self.currentPlaylists[plName]
+						print plName, 'is now empty, deleting.'
 							
 				else:
 					print'Usage: del <ID or playlist name> [from <playlist name>] '
@@ -275,13 +281,13 @@ class commandShell(object):
 				pass
 			
 		#=============================================================================================
-		#=========== PLAYLIST PRINTING FUNCTIONS
+		#=========== PLAYLIST PRINTING FUNCTION
 		#=============================================================================================
 		elif userInput[0] == 'currentlists' or userInput[0] == "plist":
 			if not self.currentPlaylists:
 				print 'No playlists loaded.'
 			for item in self.currentPlaylists:
-				self.currentPlaylists[item].pprint()#.encode('utf-8')
+				print self.currentPlaylists[item]
 		
 		#=============================================================================================
 		#=========== SAVE/LOAD PLAYLISTS
@@ -320,7 +326,7 @@ class commandShell(object):
 		elif userInput[0] == 'crash':
 			raise 'sup bro'
 		elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
-			results = getListOfSongs()
+			results = self.db.getListOfSongs()
 			for item in results:
 				if item['length'] == 'Unknown':
 					print 'unknown found! ', item
@@ -366,21 +372,31 @@ class player(object):
 	def playAList(self, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
 		if index == 0:#only print entire playlist when beginning to play it
-			listname.pprint()
+			print listname
+		if type(listname) == basestring:
+			listname = self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
-		self.playLocation(listname.playlist[index], 'playlist')
+		self.playLocation(self.cmdSh.currentPlaylists[listname][index], 'playlist')
 
 	def playRandom(self, startWith=None):
 		self.playType = 'random'
-	#	print self.cmdSh.currentPlaylists.keys()
-	#	if 'random' in self.cmdSh.currentPlaylists.keys():
-	#		
-		if not startWith == None:
-			self.playLocation(self.dbName.getLocationByID(startWith))
+		if 'random' in self.cmdSh.currentPlaylists.keys():
+			if not startWith == None:
+				self.playLocation(self.dbName.getLocationByID(startWith))
+			self.playAList('random', self.dbName.getRandomID())
 		else:
-			songID = self.dbName.getRandomID()
-			self.playLocation(self.dbName.getLocationByID(songID), 'random')
-		
+			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
+			songList = self.dbName.getListOfSongs()
+			for item in songList:
+				self.cmdSh.currentPlaylists['random'].append(item['location'])
+		#	self.cmdSh.currentPlaylists['random'].randomize()
+			random.shuffle(self.cmdSh.currentPlaylists['random'])
+			if not startWith == None:
+				self.playLocation(self.dbName.getLocationByID(startWith))
+			else:
+				self.playAList('random')
+
+
 #=============================================================================================
 #=========== EASY FUNCTIONS ABOVE - THAR BE DRAGONS BELOW
 #=============================================================================================
@@ -400,7 +416,7 @@ class player(object):
 		self.growl.register()
 		
 	def primePlayer(self, location, playtype):
-		"""Feed me a location to get the player rolling. After this, call play()
+		"""Feed me a location to get the player rolling. After this, call self.play()
 		Playtype can be 'random', 'playlist' or 'one'.
 		When playtype is playlist, self.currentList must be set to the name of the current playlist."""
 		self.unprimePlayer()
@@ -449,8 +465,9 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.playType == 'playlist':
-			nextSongIndex = self.currentList.playlist.index(lastPlayed['location']) + 1
-			if nextSongIndex >= len(self.currentList.playlist):#are we at the end of the playlist?
+			print lastPlayed['location']
+			nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
+			if nextSongIndex >= len(self.currentList):#are we at the end of the playlist?
 				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
 				else:
