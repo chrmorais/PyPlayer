@@ -200,8 +200,11 @@ class commandShell(object):
 				if results == None or results == []:
 					print 'No results found.'
 				else:
-					for row in results:
-						print str(row['ID']) + ' ' + row['title']
+					for songRow in results:
+						print 'ID: ' + str(songRow['ID']) + ' | ' + \
+						'Title: ' + songRow['title'] + ' | ' + \
+						'Album: ' + songRow['album'] + ' | ' + \
+						'Artist: ' + songRow['artist']
 			except IndexError:
 				print 'You forgot to enter some search terms!'
 		#=============================================================================================

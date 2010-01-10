@@ -154,6 +154,10 @@ class database(object):
 		results = sess.query(songfromdb).filter(sqlalchemy.or_(songfromdb.title.like(query), songfromdb.artist.like(query), songfromdb.album.like(query))).order_by('album').all() 
 		returnMe = []
 		for row in results:
+			try: 
+				longNess = int(row.length)
+			except ValueError:
+				longNess = 'Unknown'
 			returnMe.append({'ID':row.ID, \
 			'title':unicode(row.title).encode('utf-8'), \
 			'album':unicode(row.album).encode('utf-8'), \
@@ -161,8 +165,7 @@ class database(object):
 			'year':unicode(row.year).encode('utf-8'), \
 			'genre':unicode(row.genre).encode('utf-8'), \
 			'location':unicode(row.location).encode('utf-8'), \
-			'length':float(row.length)})
-		#print returnMe
+			'length':longNess})
 		sess.commit()
 		sess.close()
 		return returnMe
