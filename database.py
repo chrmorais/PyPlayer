@@ -205,9 +205,8 @@ class database(object):
 			return returnString
 	def deleteItem(self, location):
 		sess = self.sessionMaker()
-		#try:
 		result = sess.query(songfromdb).filter(songfromdb.location == location).one()
-		printMe = result.name
+		printMe = result.title
 		sess.delete(result)
 		sess.commit()
 		sess.close()
