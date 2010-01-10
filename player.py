@@ -315,8 +315,10 @@ class commandShell(object):
 		#=============================================================================================
 		elif userInput[0] == 'crash':
 			raise 'sup bro'\
+		elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
+			
 		#=============================================================================================
-		#=========== 'DEBUGGING'
+		#=========== RESCAN LIBRARY
 		#=============================================================================================
 		elif userInput[0] == 'rescan':
 			print 'Remaking library'
@@ -386,6 +388,9 @@ class player(object):
 		self.growl.register()
 		
 	def primePlayer(self, location, playtype):
+		"""Feed me a location to get the player rolling. After this, call play()
+		Playtype can be 'random', 'playlist' or 'one'.
+		When playtype is playlist, self.currentList must be set to the name of the current playlist."""
 		self.unprimePlayer()
 		if isinstance(location, unicode):
 			location = location.encode('utf-8')
@@ -424,11 +429,11 @@ class player(object):
 		self.unprimePlayer()
 		if self.playType == 'playlist':
 			nextSongIndex = self.currentList.playlist.index(lastPlayed['location']) + 1
-			if nextSongIndex >= len(self.currentList.playlist):
+			if nextSongIndex >= len(self.currentList.playlist):#are we at the end of the playlist?
 				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
 				else:
-					self.playAList(self.currentList, index=0)
+					self.playAList(self.currentList, index=0) #loop the playlist
 			else:
 				self.playAList(self.currentList, index=nextSongIndex)
 		elif self.playType == 'one':#thats all, folks~~!

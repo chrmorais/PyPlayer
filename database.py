@@ -210,10 +210,6 @@ class database(object):
 		sess.delete(result)
 		sess.commit()
 		sess.close()
-		#except TypeError:#item is already gone from db
-		#	return 'Deletion not necessary; ', location, ' not found'
-			
-		#self.c.execute('delete from library where location=:location', {'location':location})
 		return 'Deleted ' + printMe
 		
 	def addItemByLocation(self, location):
