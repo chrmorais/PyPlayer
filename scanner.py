@@ -22,13 +22,15 @@ class song(object):
 	def __init__(self, location):
 		self.meta = dict()
 		self.trackmetas = ['ID', 'title', 'album', 'artist', 'date', 'genre', 'length', 'description']
-
+		self.doNotAdd = False
 		if os.path.splitext(location)[1].lower() == u'.mp3':
 			try:
 				self.file = EasyID3(location)
 				self.mp3 = MP3(location)
 			except ID3NoHeaderError:
-				pass
+				self.doNotAdd = True
+				print 'No ID3 tags found for ' + location + ', so not adding to library.'
+				return
 			self.fileType = 'mp3'
 				
 		elif os.path.splitext(location)[1].lower() == '.flac':
@@ -58,7 +60,9 @@ class song(object):
 			try:
 				self.meta[tagname] = self.mp3.info.length
 			except AttributeError:
-				self.meta[tagname] = "Unknown"
+				print self.meta['location']
+		#		self.meta[tagname] = 300 #We give it an approximate default size so at least the player does not get stuck on it
+				#this is terrible, but if we can't get the length...
 
 			
 		#print tagname, self.meta[tagname]
@@ -118,7 +122,8 @@ class scanMachine(object):
 		self.dbInsertList = []
 		for item in songList:
 			songdata = song(item)
-			self.dbInsertList.append((songdata.meta['title'], songdata.meta['album'], songdata.meta['artist'], songdata.meta['date'], songdata.meta['genre'], songdata.meta['location'], songdata.meta['length']))
+			if not songdata.doNotAdd:
+				self.dbInsertList.append((songdata.meta['title'], songdata.meta['album'], songdata.meta['artist'], songdata.meta['date'], songdata.meta['genre'], songdata.meta['location'], songdata.meta['length']))
 		self.db.insertData(self.dbInsertList)
 		sess = self.db.sessionMaker()
 		print sess.query(database.songfromdb).count(), 'songs in the library.'

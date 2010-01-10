@@ -220,16 +220,17 @@ class database(object):
 	def addItemByLocation(self, location):
 		sess = self.sessionMaker()
 		item = scanner.song(location)
-		songID = sess.query(songfromdb).count() + 1
-		insertSong = songfromdb(songID, item.meta['title'], item.meta['album'], item.meta['artist'], item.meta['date'], item.meta['genre'], item.meta['location'], item.meta['length'])
-		sess.add(insertSong)
+		if not item.doNotAdd:
+			songID = sess.query(songfromdb).count() + 1
+			insertSong = songfromdb(songID, item.meta['title'], item.meta['album'], item.meta['artist'], item.meta['date'], item.meta['genre'], item.meta['location'], item.meta['length'])
+			sess.add(insertSong)
 		sess.commit()
 		sess.close()
 		return 'Added ' + item.meta['title']
 	def getListOfLocations(self):
 		"""returns a list of every song location in the database. For use in database comparison"""
 		sess = self.sessionMaker()
-		results = sess.query(songfromdb).all()#['location']
+		results = sess.query(songfromdb).all()
 		returnMe = []
 		for item in results:
 			returnMe.append(item.location)
