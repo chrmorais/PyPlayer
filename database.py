@@ -137,10 +137,10 @@ class database(object):
 		return returnMe
 	def getRandomID(self):
 		sess = self.sessionMaker()
-		maxID = sess.query(songfromdb).count()
+		maxID = max(sess.query(songfromdb.ID))
 		sess.commit()
 		sess.close()
-		ID = random.randint(1, maxID)
+		ID = random.randint(1, maxID[0])
 		return ID
 	def searchForSongs(self, query):
 		if not query or query == '':

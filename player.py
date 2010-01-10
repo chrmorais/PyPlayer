@@ -372,6 +372,9 @@ class player(object):
 
 	def playRandom(self, startWith=None):
 		self.playType = 'random'
+	#	print self.cmdSh.currentPlaylists.keys()
+	#	if 'random' in self.cmdSh.currentPlaylists.keys():
+	#		
 		if not startWith == None:
 			self.playLocation(self.dbName.getLocationByID(startWith))
 		else:
