@@ -19,7 +19,6 @@ import subprocess
 import readline
 import os
 import random
-import cPickle
 import glob
 import pygst
 pygst.require("0.10")
@@ -79,29 +78,21 @@ class commandShell(object):
 		self.scanForChanges()
 			
 	def scanForChanges(self):
-		"""Checks the current music folder vs. a pickled old db list. Any changes are merged in automatically."""
+		"""Checks the current music folder vs. the current database. Any changes are merged in automatically."""
 		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
-		picklePath = os.path.join(self.dir, 'musicDirData.pickle')
-		newSongs = []
-		deletedSongs = []
 		if not self.db.isDBThere():
 			print 'Database not there!~\nRemaking library'
 			self.db.metadata.create_all(self.db.conn)
 			remakeList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
 			self.scnr.addToDatabase(remakeList)
-		if not glob.glob(picklePath):
-			cPickle.dump(songList, open(picklePath, 'w+b'), 2)
-		else:#do comparison, comparison file exists
-			oldSongList = cPickle.load(open(picklePath, 'r+b'))
+		else:#DB appears OK, let's compare and fix!
+			oldSongList = self.db.getListOfLocations()
 			for item in songList:
 				if item not in oldSongList:
-					print 'Adding ', item
 					print self.db.addItemByLocation(item)
 			for item in oldSongList:
 				if item not in songList:
-					print 'Attempting removal of ', item
 					print self.db.deleteItem(item)
-			cPickle.dump(songList, open(picklePath, 'w+b'), 2)
 		return 
 	def scanForPlaylists(self):
 		"""Scans the current working directory (ie the script directory) recursively for playlists and loads them."""
@@ -164,18 +155,17 @@ class commandShell(object):
 					#is it a playlist name?
 					self.plyr.playAList(self.currentPlaylists[userInput[1]])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
-				#IF NO RESULTS FOUND, DONT MAKE PLAYLIST
 					#pdb.set_trace()
 					randomName = ['temp', unicode(random.getrandbits(50))]
 					randomName = ''.join(randomName)
 					searchQuery = rawInput[5:]
 					searchResults = self.db.searchForSongs(searchQuery)
-					if not searchResults == [] or not searchResults == None:
+					if not searchResults == [] and not searchResults == None:
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
 							self.currentPlaylists[randomName].add(song['location'])
 						self.plyr.playAList(self.currentPlaylists[randomName], temp=True)
-					else:
+					else:#no results found, obviously
 						print 'No results found, try harder.'
 
 					

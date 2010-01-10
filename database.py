@@ -204,6 +204,7 @@ class database(object):
 		sess = self.sessionMaker()
 		#try:
 		result = sess.query(songfromdb).filter(songfromdb.location == location).one()
+		printMe = result.name
 		sess.delete(result)
 		sess.commit()
 		sess.close()
@@ -211,7 +212,7 @@ class database(object):
 		#	return 'Deletion not necessary; ', location, ' not found'
 			
 		#self.c.execute('delete from library where location=:location', {'location':location})
-		return 'Deletion complete'
+		return 'Deleted ' + printMe
 		
 	def addItemByLocation(self, location):
 		sess = self.sessionMaker()
@@ -221,7 +222,17 @@ class database(object):
 		sess.add(insertSong)
 		sess.commit()
 		sess.close()
-		return 'Added sucessfully'
+		return 'Added ' + item.meta['title']
+	def getListOfLocations(self):
+		"""returns a list of every song location in the database. For use in database comparison"""
+		sess = self.sessionMaker()
+		results = sess.query(songfromdb).all()#['location']
+		returnMe = []
+		for item in results:
+			returnMe.append(item.location)
+		sess.commit()
+		sess.close()
+		return returnMe
 
 class playlist(object):
 	"""Internal representation of a list of songs.
