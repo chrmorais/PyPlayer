@@ -367,16 +367,4 @@ class XmlWriter(object):
 			return ret + '>'
 
 if __name__ == '__main__':
-#	db = database('/Users/ripdog/Working/PyPlayer2/songBase.sqlite')
-#	print db.lookupSongByID(224).keys()
-#	pl = playlist(db)
-#	lol = 0
-#	while lol < 100:
-#		pl.add(db.lookupSongByID(db.getRandomID()))
-#		lol += 1
-#	pl.saveToDisk('playlist.xspf')
-#	pl.loadFromDisk('playlist.xspf')
-	
-	#db.testData()
-#	print db.getLocationByID(db.getRandomID())
-	db.endSession()
+	print 'Don\'t run me! I\'m just a module file, run player.py!'
