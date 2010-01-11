@@ -102,12 +102,15 @@ class commandShell(object):
 		listOfPlaylists = self.scnr.scanForFiles(startDirectory=self.dir, fileTypes=['xspf'], dontvisit=[])
 		for item in listOfPlaylists:
 			plName = os.path.split(item)[-1].split('.')[0]
-			try:
-				if self.currentPlaylists[plName]:
+			if not plName == 'random':
+				try:
+					if self.currentPlaylists[plName]:
+						print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
+				except KeyError:
+					self.currentPlaylists[plName] = database.playlist(self.db, plName)
 					print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
-			except KeyError:
-				self.currentPlaylists[plName] = database.playlist(self.db, plName)
-				print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
+			else:
+				os.remove(os.path.join(self.dir, plName +'.xspf'))
 	
 	def createShell(self):
 		while True:
@@ -164,7 +167,7 @@ class commandShell(object):
 					randomName = ''.join(randomName)
 					searchQuery = rawInput[5:]
 					searchResults = self.db.searchForSongs(searchQuery)
-					if searchResults:#TEST IF THIS STILL WORKS
+					if searchResults:
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
 							self.currentPlaylists[randomName].append(song['location'])

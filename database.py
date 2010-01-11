@@ -153,6 +153,8 @@ class database(object):
 		sess = self.sessionMaker()
 		results = sess.query(songfromdb).filter(sqlalchemy.or_(songfromdb.title.like(query), songfromdb.artist.like(query), songfromdb.album.like(query))).order_by('album').all() 
 		returnMe = []
+		if not results:
+			return None
 		for row in results:
 			try: 
 				longNess = int(row.length)
