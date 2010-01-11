@@ -35,16 +35,16 @@ class songfromdb(decBase):
 	
 	def __init__(self, ID, title, album, artist, year, genre, location, length):
 		self.ID = ID
-		self.title = title
-		self.album = album
-		self.artist = artist
-		self.year = year
-		self.genre = genre
-		self.location = location
-		self.length = length
+		self.title = uniMe(title)
+		self.album = uniMe(album)
+		self.artist = uniMe(artist)
+		self.year = uniMe(year)
+		self.genre = uniMe(genre)
+		self.location = uniMe(location)
+		self.length = uniMe(length)
 	
 	def __str__(self):
-		returnstring = 'ID: ' + str(self.ID) + ' Title: ' + self.title.encode('utf-8') + ' Album: ' + self.album.encode('utf-8')
+		returnstring = u'ID: ' + uniMe(str(self.ID)) + u' Title: ' + self.title + u' Album: ' + self.album
 		return returnstring
 
 class database(object):
@@ -71,7 +71,7 @@ class database(object):
 			print song
 
 	def insertData(self, data):
-		"""inserts a list of items to the database. Pass in a list of song dataz, [[title, album, artist, year, genre, location, length], [title...]]
+		"""inserts a list of items to the database. Pass in a list of song dataz, [[title, album, artist, year, genre, location, length], [title]]
 		This function creates the database if necessary."""
 		sess = self.sessionMaker()
 		try:
@@ -100,38 +100,38 @@ class database(object):
 	#	sess.query()
 	def lookupSongByID(self, songID):
 		sess = self.sessionMaker()
-	 	result = sess.query(songfromdb).filter(songfromdb.ID == int(songID)).one()
-		result = {'ID':result.ID, \
-		'title':unicode(result.title).encode('utf-8'), \
-		'album':unicode(result.album).encode('utf-8'), \
-		'artist':unicode(result.artist).encode('utf-8'), \
-		'year':unicode(result.year).encode('utf-8'), \
-		'genre':unicode(result.genre).encode('utf-8'), \
-		'location':unicode(result.location).encode('utf-8'), \
-		'length':float(result.length)}
+		row = sess.query(songfromdb).filter(songfromdb.ID == int(songID)).one()
+		returnMe = {'ID':row.ID, \
+		'title':uniMe(row.title), \
+		'album':uniMe(row.album), \
+		'artist':uniMe(row.artist), \
+		'year':uniMe(row.year), \
+		'genre':uniMe(row.genre), \
+		'location':uniMe(row.location), \
+		'length':uniMe(row.length)}
 		sess.commit()
 		sess.close()
-		return result
+		return returnMe
 	def lookupSongByLocation(self, location):
 		sess = self.sessionMaker()
 		if type(location) == str:
 			location = location.decode('utf-8')
-		result = sess.query(songfromdb).filter(songfromdb.location == location).one()
-		result = {'ID':result.ID, \
-		'title':unicode(result.title).encode('utf-8'), \
-		'album':unicode(result.album).encode('utf-8'), \
-		'artist':unicode(result.artist).encode('utf-8'), \
-		'year':unicode(result.year).encode('utf-8'), \
-		'genre':unicode(result.genre).encode('utf-8'), \
-		'location':unicode(result.location).encode('utf-8'), \
-		'length':float(result.length)}
+		row = sess.query(songfromdb).filter(songfromdb.location == location).one()
+		returnMe = {'ID':row.ID, \
+		'title':uniMe(row.title), \
+		'album':uniMe(row.album), \
+		'artist':uniMe(row.artist), \
+		'year':uniMe(row.year), \
+		'genre':uniMe(row.genre), \
+		'location':uniMe(row.location), \
+		'length':uniMe(row.length)}
 		sess.commit()
 		sess.close()
-		return result
+		return returnMe
 	def getLocationByID(self, songID):
 		sess = self.sessionMaker()
 		result = sess.query(songfromdb).filter(songfromdb.ID == songID).one()
-		returnMe =  result.location
+		returnMe =	result.location
 		sess.commit()
 		sess.close()
 		return returnMe
@@ -146,8 +146,7 @@ class database(object):
 		if not query or query == '':
 			print 'Please enter search terms'
 			return None
-		if type(query) == str:
-			query = query.decode('utf-8')
+		query = uniMe(query)
 		query = query.lower()
 		query = '%' + query + '%'
 		sess = self.sessionMaker()
@@ -156,51 +155,45 @@ class database(object):
 		if not results:
 			return None
 		for row in results:
-			try: 
-				longNess = int(row.length)
-			except ValueError:
-				longNess = 'Unknown'
 			returnMe.append({'ID':row.ID, \
-			'title':unicode(row.title).encode('utf-8'), \
-			'album':unicode(row.album).encode('utf-8'), \
-			'artist':unicode(row.artist).encode('utf-8'), \
-			'year':unicode(row.year).encode('utf-8'), \
-			'genre':unicode(row.genre).encode('utf-8'), \
-			'location':unicode(row.location).encode('utf-8'), \
-			'length':longNess})
+			'title':uniMe(row.title), \
+			'album':uniMe(row.album), \
+			'artist':uniMe(row.artist), \
+			'year':uniMe(row.year), \
+			'genre':uniMe(row.genre), \
+			'location':uniMe(row.location), \
+			'length':uniMe(row.length)})
 		sess.commit()
 		sess.close()
 		return returnMe
 	def pprint(self, songID):
 		sess = self.sessionMaker()
 		songRow = sess.query(songfromdb).filter(songfromdb.ID == songID).one()
-		
 		if not songRow:
 			return 'Song not found.'
 		else:
-			returnString =  'ID: ' + str(songRow.ID).encode('utf-8') + ' | ' + \
-			'Title: ' + songRow.title.encode('utf-8') + ' | ' + \
-			'Album: ' + songRow.album.encode('utf-8') + ' | ' + \
-			'Artist: ' + songRow.artist.encode('utf-8') + ' | ' + \
-			'Length: ' + str(songRow.length).encode('utf-8')
+			returnString =	'ID: ' + str(songRow.ID).decode('utf-8') + ' | ' + \
+			'Title: ' + uniMe(songRow.title) + ' | ' + \
+			'Album: ' + uniMe(songRow.album) + ' | ' + \
+			'Artist: ' + uniMe(songRow.artist) + ' | ' + \
+			'Length: ' + uniMe(songRow.length)
 			sess.commit()
 			sess.close()
 			return returnString
 	def pprintByLocation(self, snglocation):
 		sess = self.sessionMaker()
-		if type(snglocation) == str:
-			snglocation = unicode(snglocation, 'utf-8')
+		snglocation = uniMe(snglocation)
 		songRow = sess.query(songfromdb).filter(songfromdb.location == snglocation).one()
 		if not songRow:
 			sess.commit()
 			sess.close()
 			return 'Song not found.'
 		else:
-			returnString =  'ID: ' + str(songRow.ID).encode('utf-8') + ' | ' + \
-			'Title: ' + songRow.title.encode('utf-8') + ' | ' + \
-			'Album: ' + songRow.album.encode('utf-8') + ' | ' + \
-			'Artist: ' + songRow.artist.encode('utf-8') + ' | ' + \
-			'Length: ' + str(songRow.length).encode('utf-8')
+			returnString =	'ID: ' + uniMe(str(songRow.ID)) + ' | ' + \
+			'Title: ' + uniMe(songRow.title) + ' | ' + \
+			'Album: ' + uniMe(songRow.album) + ' | ' + \
+			'Artist: ' + uniMe(songRow.artist) + ' | ' + \
+			'Length: ' + uniMe(str(songRow.length))
 			sess.commit()
 			sess.close()
 			return returnString
@@ -232,21 +225,24 @@ class database(object):
 			if locations == True:
 				returnMe.append(row.location)
 			else:
-				try: 
-					longNess = int(row.length)
-				except ValueError:
-						longNess = 'Unknown'
-				returnMe.append({'ID':row.ID, \
-				'title':unicode(row.title).encode('utf-8'), \
-				'album':unicode(row.album).encode('utf-8'), \
-				'artist':unicode(row.artist).encode('utf-8'), \
-				'year':unicode(row.year).encode('utf-8'), \
-				'genre':unicode(row.genre).encode('utf-8'), \
-				'location':unicode(row.location).encode('utf-8'), \
-				'length':longNess})
+				returnMe.append({'ID':uniMe(str(row.ID)), \
+				'title':row.title, \
+				'album':row.album, \
+				'artist':row.artist, \
+				'year':row.year, \
+				'genre':row.genre, \
+				'location':row.location, \
+				'length':row.length})
+			#	print type(returnMe[0]['location'])
 		sess.commit()
 		sess.close()
+		
 		return returnMe
+def uniMe(obj, encoding='utf-8'):
+	if isinstance(obj, basestring):
+		if not isinstance(obj, unicode):
+			obj = unicode(obj, encoding)
+	return obj
 
 class playlist(list):
 	"""Internal representation of a list of songs.
@@ -255,22 +251,18 @@ class playlist(list):
 		self.db = dbName
 		self.plName = name
 	def __str__(self):
-		"""docstring for __str__"""
 		returnString = ''
-		#if not self.plName == 'random':
 		print self.plName.center(62, '=')
 		for item in self:
-			print self.db.pprintByLocation(item).decode('utf-8')
+			print self.db.pprintByLocation(item)
 		return '=============================================================='
 		#return ''
 	def __setitem__(self, index, item):
-		if isinstance(item, unicode):
-			item = item.encode('utf-8')
+		item = uniMe(item)
 		return list.__setitem__(self, index, item)
 	def add(self, songLoc, load=False):#CHECK IF LOCATION IS VALID - SEARCH FOR FILENAME IF NOT; OR BUST SAFELY
 		if isinstance(songLoc, basestring):
-			if isinstance(songLoc, unicode):
-				songLoc = songLoc.encode('utf-8')
+			songLoc = uniMe(songLoc)
 			if songLoc in self:
 				print 'Duplicate not added:', songLoc
 			else:
@@ -282,7 +274,7 @@ class playlist(list):
 			print "Please give me a string location!"
 	def saveToDisk(self, location, directory):
 		"""Saves the playlist to the chosen location in XSPF format."""
-		if location.startswith('temp') or location.startswith('shuffle'):
+		if location.startswith('temp') or location == 'random':
 			return "We don't save temporaries!"
 		location = os.path.join(directory, location)
 		xml = XmlWriter(io.open(location, 'w+b'), indentAmount='  ')
@@ -292,8 +284,7 @@ class playlist(list):
 		xml.start('trackList')
 
 		for line in self:
-			if isinstance(line, unicode):
-				line = line.encode('utf-8')
+			line = uniMe(line)
 			url = 'file://' + urllib.pathname2url(line)
 			xml.start('track')
 			xml.elem('location', url)
@@ -303,7 +294,7 @@ class playlist(list):
 		return 'Success'
 	def loadFromDisk(self, plName, pathName):
 		"""loads a playlist from the harddrive"""
-		location = os.path.join(pathName, plName + '.xspf')
+		location = uniMe(os.path.join(pathName, plName + '.xspf'))
 		try:
 			tree = parse(location)
 		except IOError:
@@ -318,7 +309,6 @@ class playlist(list):
 			self.add(formattedPath, True)
 		return 'Load of ' + plName + ' complete'
 		
-
 
 
 

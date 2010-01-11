@@ -64,6 +64,12 @@ def getHeightAndWidth():
 	x = fcntl.ioctl(fd_stdout, termios.TIOCGWINSZ, s)
 	# rows, cols, x pixels, y pixels
 	return struct.unpack("HHHH", x)
+def uniMe(obj, encoding='utf-8'):
+	if isinstance(obj, basestring):
+		if not isinstance(obj, unicode):
+			obj = unicode(obj, encoding)
+	return obj
+
 class commandShell(object):
 	def __init__(self):
 		self.exit = False
@@ -162,14 +168,15 @@ class commandShell(object):
 					print  self.currentPlaylists[userInput[1]]
 					self.plyr.playAList(userInput[1])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
-					randomName = ['temp', unicode(random.getrandbits(50))]
+					randomName = [u'temp', unicode(random.getrandbits(50))]
 					randomName = ''.join(randomName)
 					searchQuery = rawInput[5:]
 					searchResults = self.db.searchForSongs(searchQuery)
 					if searchResults:
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
-							self.currentPlaylists[randomName].add(song['location'])
+							self.currentPlaylists[randomName].add(song['location'], True)
+						print self.currentPlaylists[randomName]
 						self.plyr.playAList(randomName)
 					else:#no results found, obviously
 						print 'No results found, try harder.'
@@ -211,10 +218,10 @@ class commandShell(object):
 					print 'No results found.'
 				else:
 					for songRow in results:
-						print 'ID: ' + str(songRow['ID']) + ' | ' + \
-						'Title: ' + songRow['title'] + ' | ' + \
-						'Album: ' + songRow['album'] + ' | ' + \
-						'Artist: ' + songRow['artist']
+						print u'ID: ' + uniMe(str(songRow['ID'])) + u' | ' + \
+						u'Title: ' + songRow['title'] + u' | ' + \
+						u'Album: ' + songRow['album'] + u' | ' + \
+						u'Artist: ' + songRow['artist']
 			except IndexError:
 				print 'You forgot to enter some search terms!'
 		#=============================================================================================
@@ -399,7 +406,8 @@ class player(object):
 	#	if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
 	#		print  self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
-		self.playLocation(self.cmdSh.currentPlaylists[listname][index])
+		playMe = self.cmdSh.currentPlaylists[listname][index]
+		self.playLocation(playMe)
 
 	def playRandom(self, startWith=None):
 		if 'random' in self.cmdSh.currentPlaylists.keys():
@@ -446,6 +454,8 @@ class player(object):
 
 		self.growl.notify(noteType='Song change', title=songRow['title'], description=songRow['album'], icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
 		self.currentlyPlaying = self.dbName.lookupSongByLocation(location)
+	#	if isinstance(self.currentlyPlaying['location'], unicode):
+	#		self.currentlyPlaying['location'] = self.currentlyPlaying['location']
 		self.player.set_property("uri", formattedLocation)
 		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
 		self.threadName.daemon = True
@@ -484,11 +494,10 @@ class player(object):
 	def playNext(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
-	#	if self.playType == 'playlist':
 		if self.currentList == None or self.currentList =='':
 			self.playRandom()
 			return
-		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(unicode(lastPlayed['location'], 'utf-8')) + 1
+		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
 		if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
 			if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
 				self.playRandom()
@@ -496,9 +505,7 @@ class player(object):
 				self.playAList(self.currentList, index=0) #loop the playlist
 		else:
 			self.playAList(self.currentList, index=nextSongIndex)
-	#	else:#either random or invalid playtype. Honestly, I don't care
-	#		self.playRandom()
-			
+
 	def playPrevious(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
@@ -542,6 +549,8 @@ class player(object):
 					PositionString = self.secondsToReadableTime(pos_int, True)
 					if spam:
 						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\r'
+						if isinstance(stringToWrite, unicode):
+							stringToWrite = stringToWrite.encode('utf-8')
 						termSize = getHeightAndWidth()
 						sys.stdout.write((' ' * termSize[1]) + '\r')#what we do here is clear the entire line. 
 						sys.stdout.flush()
