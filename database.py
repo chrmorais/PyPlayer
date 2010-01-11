@@ -263,12 +263,16 @@ class playlist(list):
 			print self.db.pprintByLocation(item).decode('utf-8')
 		return '=============================================================='
 		#return ''
+	def __setitem__(self, index, item):
+		if isinstance(item, unicode):
+			item = item.encode('utf-8')
+		return list.__setitem__(self, index, item)
 	def add(self, songLoc):#CHECK IF LOCATION IS VALID - SEARCH FOR FILENAME IF NOT; OR BUST SAFELY
 		if isinstance(songLoc, basestring):
 			if isinstance(songLoc, unicode):
 				songLoc = songLoc.encode('utf-8')
 			if songLoc in self:
-				pass
+				print 'Duplicate not added:', songLoc
 			else:
 				self.append(songLoc)
 				print 'Added ', self.db.pprintByLocation(songLoc)
@@ -310,7 +314,7 @@ class playlist(list):
 		for item in root.getiterator('{http://xspf.org/ns/0/}location'):
 			formattedPath = item.text[7:]
 			formattedPath = urllib.url2pathname(formattedPath).decode('utf-8')
-			self.append(formattedPath)
+			self.add(formattedPath)
 		return 'Load of ' + plName + ' complete'
 		
 

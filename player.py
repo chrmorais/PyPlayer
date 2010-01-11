@@ -7,7 +7,6 @@
 #docstrings as-you-type
 #reimplement protection versus duplicate playlist items
 #defense against moved files referenced in saved playlists 
-#don't save the random playlist
 """
 player.py
 
@@ -170,7 +169,7 @@ class commandShell(object):
 					if searchResults:
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
-							self.currentPlaylists[randomName].append(song['location'])
+							self.currentPlaylists[randomName].add(song['location'])
 						self.plyr.playAList(randomName)
 					else:#no results found, obviously
 						print 'No results found, try harder.'
@@ -189,7 +188,6 @@ class commandShell(object):
 		elif userInput[0] == 'stop':
 			self.plyr.unprimePlayer()
 		elif userInput[0] == 'p':
-			print self.plyr.player.get_state()[1]
 			self.plyr.playPause()
 		elif userInput[0] == 'prev':
 			self.plyr.playPrevious()
@@ -243,13 +241,13 @@ class commandShell(object):
 						self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
 						print "Created", playlistName
 					if userInput[1].isdigit():
-						self.currentPlaylists[playlistName].append(self.db.getLocationByID(userInput[1]))
+						self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
 						
 					else:
 						searchQuery = rawInput[4:end-1]
 						results = self.db.searchForSongs(searchQuery)
 						for item in results:
-							self.currentPlaylists[playlistName].append(item['location'])
+							self.currentPlaylists[playlistName].add(item['location'])
 			except (IndexError):
 				print"Usage: add <ID or search string> to <playlist name>"
 				print"Playlist is created if not already existing."
@@ -343,6 +341,25 @@ class commandShell(object):
 			print 'Remaking library'
 			songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
 			self.scnr.addToDatabase(songList)
+		#=============================================================================================
+		#=========== MISC FUNCTIONS
+		#=============================================================================================
+		elif userInput[0] == 'stats':
+			library = self.db.getListOfSongs()
+			totalNum = len(library)
+			totalLength = 0
+			libraryLengths = list()
+			for item in library:
+				totalLength += item['length']
+				libraryLengths.append(item['length'])
+			maxLength = max(libraryLengths)
+			avgLength = totalLength / len(library)
+			minLength = min(libraryLengths)
+			print "Total length of songs in library:", self.plyr.secondsToReadableTime(totalLength, False)
+			print 'Total number of songs in library:', totalNum
+			print 'Longest song in library:', self.plyr.secondsToReadableTime(maxLength, False)
+			print 'Shortest song in library:', self.plyr.secondsToReadableTime(minLength, False)
+			print 'Average length of song in library:', self.plyr.secondsToReadableTime(avgLength, False)
 	def quitProperly(self):
 		"""docstring for quitProperly"""
 		if not self.currentPlaylists == {}:
@@ -393,7 +410,7 @@ class player(object):
 			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
 			songList = self.dbName.getListOfSongs()
 			for item in songList:
-				self.cmdSh.currentPlaylists['random'].append(item['location'])
+				self.cmdSh.currentPlaylists['random'].add(item['location'])
 		#	self.cmdSh.currentPlaylists['random'].randomize()
 			random.shuffle(self.cmdSh.currentPlaylists['random'])
 			if not startWith == None:
@@ -449,7 +466,9 @@ class player(object):
 			pass
 		self.threadName = None
 		return
-		
+	#=============================================================================================
+	#=========== PLAY CONTROL FUNCTIONS
+	#=============================================================================================
 	def play(self):
 		self.player.set_state(gst.STATE_PLAYING)
 
@@ -491,6 +510,9 @@ class player(object):
 			self.playAList(self.currentList, index=-1) #play the last song
 		else:
 			self.playAList(self.currentList, index=prevSongIndex)
+	#=============================================================================================
+	#=========== PLAY THREAD FUNCTION
+	#=============================================================================================
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
 		while not gst.STATE_PLAYING == self.player.get_state()[1]:
@@ -542,7 +564,9 @@ class player(object):
 			except OSError:
 				print 'Error detected: '
 				
-	
+	#=============================================================================================
+	#=========== MISC FUNCTIONS
+	#=============================================================================================
 	def secondsToReadableTime(self, timeInt, divide):
 		if divide:
 			timeInt = timeInt / 1000000000
