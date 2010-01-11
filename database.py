@@ -258,7 +258,6 @@ class playlist(list):
 		#if not self.plName == 'random':
 		print self.plName.center(62, '=')
 		for item in self:
-			print item
 			print self.db.pprintByLocation(item).decode('utf-8')
 		return '=============================================================='
 		#return ''
@@ -274,8 +273,6 @@ class playlist(list):
 					
 		else:
 			print "Please give me a string location!"
-
-	    
 	def saveToDisk(self, location, directory):
 		"""Saves the playlist to the chosen location in XSPF format."""
 		if location.startswith('temp') or location.startswith('shuffle'):

@@ -168,7 +168,7 @@ class commandShell(object):
 						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
 						for song in searchResults:
 							self.currentPlaylists[randomName].append(song['location'])
-						self.plyr.playAList(self.currentPlaylists[randomName])
+						self.plyr.playAList(randomName)
 					else:#no results found, obviously
 						print 'No results found, try harder.'
 
@@ -287,7 +287,8 @@ class commandShell(object):
 			if not self.currentPlaylists:
 				print 'No playlists loaded.'
 			for item in self.currentPlaylists:
-				print self.currentPlaylists[item]
+				if not item == 'random':
+					print self.currentPlaylists[item]
 		
 		#=============================================================================================
 		#=========== SAVE/LOAD PLAYLISTS
@@ -371,10 +372,10 @@ class player(object):
 		self.play()
 	def playAList(self, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
-		if index == 0:#only print entire playlist when beginning to play it
-			print listname
-		if type(listname) == basestring:
-			listname = self.cmdSh.currentPlaylists[listname]
+	#	if type(listname) == basestring:
+	#		listname = self.cmdSh.currentPlaylists[listname]
+		if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
+			print  self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
 		self.playLocation(self.cmdSh.currentPlaylists[listname][index], 'playlist')
 
@@ -383,7 +384,7 @@ class player(object):
 		if 'random' in self.cmdSh.currentPlaylists.keys():
 			if not startWith == None:
 				self.playLocation(self.dbName.getLocationByID(startWith))
-			self.playAList('random', self.dbName.getRandomID())
+			self.playAList('random', 0)
 		else:
 			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
 			songList = self.dbName.getListOfSongs()
@@ -465,18 +466,27 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.playType == 'playlist':
-			print lastPlayed['location']
 			nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
 			if nextSongIndex >= len(self.currentList):#are we at the end of the playlist?
-				if self.currentList.plName.startswith('temp'):#we want to play random songs afterwards, not loop.
+				if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
 				else:
 					self.playAList(self.currentList, index=0) #loop the playlist
 			else:
 				self.playAList(self.currentList, index=nextSongIndex)
-		elif self.playType == 'one':#thats all, folks~~!
-			return
 		else:#either random or invalid playtype. Honestly, I don't care
+			self.playRandom()
+			
+	def playPrevious(self):
+		lastPlayed = self.currentlyPlaying
+		self.unprimePlayer()
+		if self.playType == 'playlist':
+			prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
+			if prevSongIndex <= 0:
+				self.playAList(self.currentList, index=-1) #play the last song
+			else:
+				self.playAList(self.currentList, index=prevSongIndex)
+		else:
 			self.playRandom()
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
