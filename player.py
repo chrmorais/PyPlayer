@@ -5,7 +5,6 @@
 #Command shell with regexes
 #ncurses interface
 #docstrings as-you-type
-#reimplement protection versus duplicate playlist items
 #defense against moved files referenced in saved playlists 
 """
 player.py
@@ -33,6 +32,7 @@ import termios
 import fcntl
 import struct
 import yaml
+import cmd
 
 #So, you ignored that STERN warning on the github page, eh? Well, I'm very flattered, but you're in for a bumpy ride. Ok, heres what you need to do:
 #edit the config file, insert paths where directed. Install packages as necessary to fufill packages required for the above imports. Also toss in sqlite3. Then run me, song db should be created automatically.
@@ -538,12 +538,7 @@ class player(object):
 		print '\nPlaying: ', self.dbName.pprintByLocation(self.currentlyPlaying['location'])
 		while True:
 			try:			
-			#	if DurationString == None:
-			#		print 'Unable to calculate duration of song. Stopping playback.'
-			#		print self.currentlyPlaying
-			#		self.unprimePlayer()
-			#		break
-				
+			
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
 					PositionString = self.secondsToReadableTime(pos_int, True)
@@ -607,6 +602,13 @@ if __name__ == "__main__":
 	
 	
 #the graveyard
+
+
+#	if DurationString == None:
+#		print 'Unable to calculate duration of song. Stopping playback.'
+#		print self.currentlyPlaying
+#		self.unprimePlayer()
+#		break
 #subprocess.Popen(command, stdout=open('/dev/null'), stderr=open('/dev/null')).wait()
 #help_message = '''
 #Sup bro. Fuck off.
