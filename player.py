@@ -410,7 +410,7 @@ class player(object):
 			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
 			songList = self.dbName.getListOfSongs()
 			for item in songList:
-				self.cmdSh.currentPlaylists['random'].add(item['location'])
+				self.cmdSh.currentPlaylists['random'].append(item['location'])
 		#	self.cmdSh.currentPlaylists['random'].randomize()
 			random.shuffle(self.cmdSh.currentPlaylists['random'])
 			if not startWith == None:
