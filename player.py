@@ -158,7 +158,7 @@ class commandShell(object):
 					self.plyr.playRandom()
 				elif userInput[1] in self.currentPlaylists:
 					#is it a playlist name?
-					self.plyr.playAList(self.currentPlaylists[userInput[1]])
+					self.plyr.playAList(userInput[1])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
 					randomName = ['temp', unicode(random.getrandbits(50))]
 					randomName = ''.join(randomName)
@@ -188,6 +188,8 @@ class commandShell(object):
 		elif userInput[0] == 'p':
 			print self.plyr.player.get_state()[1]
 			self.plyr.playPause()
+		elif userInput[0] == 'prev':
+			self.plyr.playPrevious()
 
 		#=============================================================================================
 		#=========== QUITTING
@@ -408,7 +410,6 @@ class player(object):
 		self.currentList = None
 		self.currentlyPlaying = None
 		self.player = gst.element_factory_make("playbin", "player")
-		fakesink = gst.element_factory_make("fakesink", "fakesink")
 		bus = self.player.get_bus()
 		bus.add_signal_watch()
 		bus.connect("message", self.on_message)
@@ -466,8 +467,8 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.playType == 'playlist':
-			nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
-			if nextSongIndex >= len(self.currentList):#are we at the end of the playlist?
+			nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(unicode(lastPlayed['location'], 'utf-8')) + 1
+			if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
 				if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
 					self.playRandom()
 				else:
@@ -482,7 +483,7 @@ class player(object):
 		self.unprimePlayer()
 		if self.playType == 'playlist':
 			prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
-			if prevSongIndex <= 0:
+			if prevSongIndex < 0:
 				self.playAList(self.currentList, index=-1) #play the last song
 			else:
 				self.playAList(self.currentList, index=prevSongIndex)

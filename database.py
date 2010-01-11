@@ -305,7 +305,6 @@ class playlist(list):
 			os.remove(location)
 			return 'Invalid file'
 		root = tree.getroot()
-		pl = self.playlist
 		for item in root.getiterator('{http://xspf.org/ns/0/}location'):
 			formattedPath = item.text[7:]
 			formattedPath = urllib.url2pathname(formattedPath).decode('utf-8')
