@@ -70,8 +70,8 @@ def uniMe(obj, encoding='utf-8'):
 			obj = unicode(obj, encoding)
 	return obj
 
-class commandShell(object):
-	def __init__(self):
+class commandShell(cmd.Cmd):
+	def __init__(self, completekey='tab', stdin=None, stdout=None):
 		self.exit = False
 		self.currentPlaylists = dict()
 		self.db = db = database.database(dbLocation)
@@ -84,7 +84,13 @@ class commandShell(object):
 		self.scanForPlaylists()
 		print 'Scanning for changes to music'
 		self.scanForChanges()
-			
+		self.intro = None
+		self.stdin = sys.stdin
+		self.stdout = sys.stdout
+		self.cmdqueue = []
+		self.completekey = completekey
+		self.use_rawinput = True
+
 	def scanForChanges(self):
 		"""Checks the current music folder vs. the current database. Any changes are merged in automatically."""
 		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
@@ -116,17 +122,17 @@ class commandShell(object):
 					print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
 			else:
 				os.remove(os.path.join(self.dir, plName +'.xspf'))
-	
+	def precmd(self, lol):
+		#print 'precmd launched!'
+		return lol
 	def createShell(self):
-		while True:
 			try:
-				rawInput = None
-				userInput = None
 				if gst.STATE_PLAYING == self.plyr.player.get_state()[1]:
-					rawInput = raw_input('').lower()
+					self.prompt = ''
+					rawInput = self.cmdloop()
 				else: 
-					rawInput = raw_input('Enter command >').lower()
-				self.interpretCommand(rawInput)
+					self.prompt = 'Enter a command >'
+					rawInput = self.cmdloop()
 				
 			except KeyboardInterrupt:
 				print
@@ -134,14 +140,55 @@ class commandShell(object):
 			except EOFError:
 				print ''
 				self.quitProperly()
+	def do_play(self, command):
+		"""Play on it's own simply starts the player playing, if it is currently paused. Add some extra words to play, and it is used to get the ball rolling.
+Acceptable formats:
+play random
+play <song ID>
+play <search string>"""
+		print command
+		userInput = command.split(' ')
+		rawInput = command
+		try:
+			if not userInput[0]:
+				pass
+			if userInput[0].isdigit():
+				songIDtoPlay = int(userInput[0])
+				self.plyr.playRandom(songIDtoPlay)
+			elif userInput[0] == 'random':
+				self.plyr.playRandom()
+			elif userInput[0] in self.currentPlaylists:
+				#is it a playlist name?
+				print  self.currentPlaylists[userInput[0]]
+				self.plyr.playAList(userInput[0])
+			else:#must be a search query, let's make a temporary playlist with the results and play that
+				randomName = [u'temp', unicode(random.getrandbits(50))]
+				randomName = ''.join(randomName)
+				searchResults = self.db.searchForSongs(rawInput)
+				if searchResults:
+					self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
+					for song in searchResults:
+						self.currentPlaylists[randomName].add(song['location'], True)
+					print self.currentPlaylists[randomName]
+					self.plyr.playAList(randomName)
+				else:#no results found, obviously
+					print 'No results found, try harder.'
+
+				
+
+		except ValueError: 
+			pass
+		
+		except IndexError:
+			self.plyr.play()
+	def do_quit(self, command):
+		self.quitProperly()
 	def interpretCommand(self, rawInput):
 		userInput = rawInput.split(" ")
 		userInput[0] = userInput[0].lower()
 		if userInput[0] == "help":
 			print '''Type a space-seperated list consisting of a command and then parameters. For example:
-			play random
-			play 143
-			play <search string>
+
 			add <ID or search string> to APlaylist
 			search <string>
 			next
@@ -155,39 +202,7 @@ class commandShell(object):
 		#=========== PLAY OPERATIONS
 		#=============================================================================================
 		elif userInput[0] == 'play':
-			try:
-				if not userInput[1]:
-					pass
-				if userInput[1].isdigit():
-					songIDtoPlay = int(userInput[1])
-					self.plyr.playRandom(songIDtoPlay)
-				elif userInput[1] == 'random':
-					self.plyr.playRandom()
-				elif userInput[1] in self.currentPlaylists:
-					#is it a playlist name?
-					print  self.currentPlaylists[userInput[1]]
-					self.plyr.playAList(userInput[1])
-				else:#must be a search query, let's make a temporary playlist with the results and play that
-					randomName = [u'temp', unicode(random.getrandbits(50))]
-					randomName = ''.join(randomName)
-					searchQuery = rawInput[5:]
-					searchResults = self.db.searchForSongs(searchQuery)
-					if searchResults:
-						self.currentPlaylists[randomName] = database.playlist(self.db, randomName)
-						for song in searchResults:
-							self.currentPlaylists[randomName].add(song['location'], True)
-						print self.currentPlaylists[randomName]
-						self.plyr.playAList(randomName)
-					else:#no results found, obviously
-						print 'No results found, try harder.'
-
-					
-
-			except ValueError: 
-				pass
-			
-			except IndexError:
-				self.plyr.play()
+			pass
 		elif userInput[0] == 'pause':
 			self.plyr.pause()
 		elif userInput[0] == 'next':
