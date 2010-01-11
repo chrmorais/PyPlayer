@@ -157,6 +157,7 @@ class commandShell(object):
 					self.plyr.playRandom()
 				elif userInput[1] in self.currentPlaylists:
 					#is it a playlist name?
+					print  self.currentPlaylists[userInput[1]]
 					self.plyr.playAList(userInput[1])
 				else:#must be a search query, let's make a temporary playlist with the results and play that
 					randomName = ['temp', unicode(random.getrandbits(50))]
@@ -375,8 +376,8 @@ class player(object):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
 	#	if type(listname) == basestring:
 	#		listname = self.cmdSh.currentPlaylists[listname]
-		if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
-			print  self.cmdSh.currentPlaylists[listname]
+	#	if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
+	#		print  self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
 		self.playLocation(self.cmdSh.currentPlaylists[listname][index])
 
