@@ -5,7 +5,6 @@
 #Command shell with regexes
 #ncurses interface
 #docstrings as-you-type
-#play previous
 #reimplement protection versus duplicate playlist items
 #defense against moved files referenced in saved playlists 
 #don't save the random playlist
@@ -345,21 +344,21 @@ class commandShell(object):
 		if not self.currentPlaylists == {}:
 			save = False
 			for item in self.currentPlaylists:
-				if not item.startswith('temp'):
+				if not item.startswith('temp') and not item == 'random':
 					save = True
 					break
 			if save:
-				saveLists = raw_input('Do you want to save your playlist(s)?')
-				if saveLists.lower().strip() in ['y', 'yes', 'ok']:
-					iterator = 0
-					for item in self.currentPlaylists.keys():
-						plName = self.currentPlaylists.keys()[iterator]
-						item = self.currentPlaylists[plName]
-						item.saveToDisk(plName + '.xspf', self.dir)
-						if iterator > len(self.currentPlaylists):
-							break
-						else:
-							iterator +=1
+				#saveLists = raw_input('Do you want to save your playlist(s)?')
+				#if saveLists.lower().strip() in ['y', 'yes', 'ok']:
+				iterator = 0
+				for item in self.currentPlaylists.keys():
+					plName = self.currentPlaylists.keys()[iterator]
+					item = self.currentPlaylists[plName]
+					item.saveToDisk(plName + '.xspf', self.dir)
+					if iterator > len(self.currentPlaylists):
+						break
+					else:
+						iterator +=1
 		print "Have a good day, sah!"
 	#	self.db.endSession()
 		quit()
@@ -368,9 +367,9 @@ class commandShell(object):
 					
 					
 class player(object):
-	def playLocation(self, location, playType='random'):
+	def playLocation(self, location):
 		self.dbName.pprintByLocation(location)
-		self.primePlayer(location, playType)
+		self.primePlayer(location)
 		self.play()
 	def playAList(self, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
@@ -379,10 +378,9 @@ class player(object):
 		if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
 			print  self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
-		self.playLocation(self.cmdSh.currentPlaylists[listname][index], 'playlist')
+		self.playLocation(self.cmdSh.currentPlaylists[listname][index])
 
 	def playRandom(self, startWith=None):
-		self.playType = 'random'
 		if 'random' in self.cmdSh.currentPlaylists.keys():
 			if not startWith == None:
 				self.playLocation(self.dbName.getLocationByID(startWith))
@@ -417,17 +415,14 @@ class player(object):
 		self.growl = Growl.GrowlNotifier(applicationName=appName, notifications=['Song change'], defaultNotifications=['Song change'])
 		self.growl.register()
 		
-	def primePlayer(self, location, playtype):
-		"""Feed me a location to get the player rolling. After this, call self.play()
-		Playtype can be 'random', 'playlist' or 'one'.
-		When playtype is playlist, self.currentList must be set to the name of the current playlist."""
+	def primePlayer(self, location):
+		"""Feed me a location to get the player rolling. After this, call self.play()"""
 		self.unprimePlayer()
 		if isinstance(location, unicode):
 			location = location.encode('utf-8')
 		formattedLocation = 'file://' + urllib.pathname2url(location)
 		songRow = self.dbName.lookupSongByLocation(location)
 
-		self.playType = playtype
 		self.growl.notify(noteType='Song change', title=songRow['title'], description=songRow['album'], icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
 		self.currentlyPlaying = self.dbName.lookupSongByLocation(location)
 		self.player.set_property("uri", formattedLocation)
@@ -439,11 +434,11 @@ class player(object):
 	def unprimePlayer(self):
 		self.currentlyPlaying = None
 		self.player.set_state(gst.STATE_NULL)
-		try:
-			if not self.playType == 'playlist':
-				self.currentList == None
-		except AttributeError:
-			pass
+	#	try:
+	#		if not self.playType == 'playlist':
+	#			self.currentList == None
+	#	except AttributeError:
+	#		pass
 		try:
 			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
 		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread?! Oh well, I don't care! It works!
@@ -466,29 +461,32 @@ class player(object):
 	def playNext(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
-		if self.playType == 'playlist':
-			nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(unicode(lastPlayed['location'], 'utf-8')) + 1
-			if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
-				if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
-					self.playRandom()
-				else:
-					self.playAList(self.currentList, index=0) #loop the playlist
-			else:
-				self.playAList(self.currentList, index=nextSongIndex)
-		else:#either random or invalid playtype. Honestly, I don't care
+	#	if self.playType == 'playlist':
+		if self.currentList == None or self.currentList =='':
 			self.playRandom()
+			return
+		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(unicode(lastPlayed['location'], 'utf-8')) + 1
+		if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
+			if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
+				self.playRandom()
+			else:
+				self.playAList(self.currentList, index=0) #loop the playlist
+		else:
+			self.playAList(self.currentList, index=nextSongIndex)
+	#	else:#either random or invalid playtype. Honestly, I don't care
+	#		self.playRandom()
 			
 	def playPrevious(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
-		if self.playType == 'playlist':
-			prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
-			if prevSongIndex < 0:
-				self.playAList(self.currentList, index=-1) #play the last song
-			else:
-				self.playAList(self.currentList, index=prevSongIndex)
-		else:
+		if self.currentList == None or self.currentList =='':
 			self.playRandom()
+			return
+		prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
+		if prevSongIndex < 0:
+			self.playAList(self.currentList, index=-1) #play the last song
+		else:
+			self.playAList(self.currentList, index=prevSongIndex)
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
 		while not gst.STATE_PLAYING == self.player.get_state()[1]:
