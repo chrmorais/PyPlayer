@@ -122,33 +122,39 @@ class commandShell(cmd.Cmd):
 					print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
 			else:
 				os.remove(os.path.join(self.dir, plName +'.xspf'))
-	def precmd(self, lol):
-		#print 'precmd launched!'
-		return lol
+	def preloop(self):
+		if gst.STATE_PLAYING == self.plyr.player.get_state()[1]:
+			self.prompt = ''
+		else: 
+			self.prompt = 'Enter a command >'
 	def createShell(self):
 			try:
-				if gst.STATE_PLAYING == self.plyr.player.get_state()[1]:
-					self.prompt = ''
-					rawInput = self.cmdloop()
-				else: 
-					self.prompt = 'Enter a command >'
-					rawInput = self.cmdloop()
-				
+				self.cmdloop()
 			except KeyboardInterrupt:
 				print
 				pass
 			except EOFError:
-				print ''
+				print
 				self.quitProperly()
-	def do_play(self, command):
+	
+		#=============================================================================================
+		#=========== QUITTING
+		#=============================================================================================
+	def do_quit(self, rawInput):
+		"""Quits the application, saving all non-temporary playlists."""
+		self.quitProperly()
+		
+		#=============================================================================================
+		#=========== PLAY OPERATIONS
+		#=============================================================================================
+	def do_play(self, rawInput):
 		"""Play on it's own simply starts the player playing, if it is currently paused. Add some extra words to play, and it is used to get the ball rolling.
 Acceptable formats:
 play random
 play <song ID>
 play <search string>"""
-		print command
-		userInput = command.split(' ')
-		rawInput = command
+		print rawInput
+		userInput = rawInput.split(' ')
 		try:
 			if not userInput[0]:
 				pass
@@ -174,120 +180,118 @@ play <search string>"""
 				else:#no results found, obviously
 					print 'No results found, try harder.'
 
-				
+
 
 		except ValueError: 
 			pass
-		
+
 		except IndexError:
 			self.plyr.play()
-	def do_quit(self, command):
-		self.quitProperly()
-	def interpretCommand(self, rawInput):
-		userInput = rawInput.split(" ")
-		userInput[0] = userInput[0].lower()
-		if userInput[0] == "help":
-			print '''Type a space-seperated list consisting of a command and then parameters. For example:
-
-			add <ID or search string> to APlaylist
-			search <string>
-			next
-			play
-			pause
-			stop
-			rescan
-			'''
+	def do_pause(self, rawInput):
+		"""Pauses the currently playing song. If nothing is playing, does nothing."""
+		self.plyr.pause()
+	def do_next(self, rawInput):
+		"""Plays the next song in a playlist. 
+If we are at the end of the playlist, this command will loop normak playlists and start playing shuffle after temporary playlists.
+If no playlist is loaded, does nothing."""
+		self.plyr.playNext()
+	def do_prev(self, rawInput):
+		"""Plays the song before the currently playing song in a playlist. If at the beginning of a list, plays the final song. If no playlist loaded, does nothing."""
+		self.plyr.playPrevious()
+	def do_p(self, rawInput):
+		"Either plays or pauses playback based on wether we are currently playing or paused."
+		self.plyr.playPause()
+	def do_stop(self, rawInput):
+		"Stops playback and removes song from memory. Can not restart playback after this command without defining what to play."
+		self.plyr.unprimePlayer()
+#			print '''Type a space-seperated list consisting of a command and then parameters. For example:
+#
+#			add <ID or search string> to APlaylist
+#			search <string>
+#			next
+#			play
+#			pause
+#			stop
+#			rescan
+#			'''
 			
-		#=============================================================================================
-		#=========== PLAY OPERATIONS
-		#=============================================================================================
-		elif userInput[0] == 'play':
-			pass
-		elif userInput[0] == 'pause':
-			self.plyr.pause()
-		elif userInput[0] == 'next':
-			self.plyr.playNext()
-		elif userInput[0] == 'stop':
-			self.plyr.unprimePlayer()
-		elif userInput[0] == 'p':
-			self.plyr.playPause()
-		elif userInput[0] == 'prev':
-			self.plyr.playPrevious()
 
-		#=============================================================================================
-		#=========== QUITTING
-		#=============================================================================================
 
-		elif userInput[0] == "exit" or userInput[0] == "quit":
-			self.quitProperly()
 
-					
+
 		#=============================================================================================
 		#=========== DIRECT SEARCHES
 		#=============================================================================================
-		elif userInput[0] == 'search':
-			try:
-				searchQuery = rawInput[7:]
-				results = self.db.searchForSongs(searchQuery)
-				if results == None or results == []:
-					print 'No results found.'
-				else:
-					for songRow in results:
-						print u'ID: ' + uniMe(str(songRow['ID'])) + u' | ' + \
-						u'Title: ' + songRow['title'] + u' | ' + \
-						u'Album: ' + songRow['album'] + u' | ' + \
-						u'Artist: ' + songRow['artist']
-			except IndexError:
-				print 'You forgot to enter some search terms!'
+	def do_search(self, rawInput):
+		"""Searches for the specified terms and prints them to the command line. To do things with these results, use add or play.
+Syntax: search <search terms>"""
+		try:
+			results = self.db.searchForSongs(rawInput)
+			if results == None or results == []:
+				print 'No results found.'
+			else:
+				for songRow in results:
+					print u'ID: ' + uniMe(str(songRow['ID'])) + u' | ' + \
+					u'Title: ' + songRow['title'] + u' | ' + \
+					u'Album: ' + songRow['album'] + u' | ' + \
+					u'Artist: ' + songRow['artist']
+		except IndexError:
+			print 'You forgot to enter some search terms!'
 		#=============================================================================================
 		#=========== PLAYLIST OPERATIONS
 		#=============================================================================================
-		elif userInput[0] == 'add':
-			try:
-				end = rawInput.find('to')#Some shitty parsing here, assumes everything between the 4th character and the word "to" is the search query or ID,
-				# and everything past the word "to" (end+3) is the playlist name. Hey, it works
+	def do_add(self, rawInput):
+		"""Adds an ID or the results of a search term to a playlist.
+Playlist is created if not already existing.
+Syntax: add <ID or search string> to <playlist name>"""
+		try:
+			end = rawInput.find('to')#Some shitty parsing here, assumes everything between the 4th character and the word "to" is the search query or ID,
+			# and everything past the word "to" (end+3) is the playlist name. Hey, it works
 
-				if end == -1: #"to" not found, it's necessary!
-					print"Usage: add <ID or search string> to <playlist name>"
-					print"Playlist is created if not already existing."
-				elif rawInput[end+2:end+3] != ' ':
-					print "Remember to add a space beside \"to\""
+			if end == -1: #"to" not found, it's necessary!
+				self.onecmd('help add')
+			elif rawInput[end+2:end+3] != ' ':
+				self.onecmd('help add')
+			else:
+				playlistName = rawInput[end+3:]#This grabs the playlist name in a string.
+				if playlistName == '' or not playlistName:
+					self.onecmd('help add')
+				try:
+					if self.currentPlaylists[playlistName]:
+						pass
+				except KeyError:
+					self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
+					print "Created", playlistName
+				if userInput[1].isdigit():
+					self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
+					
 				else:
-					playlistName = rawInput[end+3:len(rawInput)]#THis grabs the playlist name in a string.
-					if playlistName == '' or not playlistName:
-						raise ValueError, 'No playlist name given'
-					try:
-						if self.currentPlaylists[playlistName]:
-							pass
-					except KeyError:
-						self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
-						print "Created", playlistName
-					if userInput[1].isdigit():
-						self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
-						
-					else:
-						searchQuery = rawInput[4:end-1]
-						results = self.db.searchForSongs(searchQuery)
-						for item in results:
-							self.currentPlaylists[playlistName].add(item['location'])
-			except (IndexError):
-				print"Usage: add <ID or search string> to <playlist name>"
-				print"Playlist is created if not already existing."
-		elif userInput[0] == 'del':
-			try:
-				if not userInput[1]:
-					pass
+					searchQuery = rawInput[4:end-1]
+					results = self.db.searchForSongs(searchQuery)
+					for item in results:
+						self.currentPlaylists[playlistName].add(item['location'])
+		except (IndexError):
+			self.onecmd('help add')
+	def do_del(self, rawInput):
+		"""Removes either an ID from a playlist, or deletes a playlist.
+If playlist is empty after ID removal, playlist is deleted.
+Syntax: del <ID or playlist name> [from <playlist name>]"""
+		userInput = rawInput.split(' ')
+		try:
+			if not userInput[0]:
+				pass
+			else:
 				start = rawInput.find('from')
 				if start == -1:#we're deleting a playlist
 					try:
-						del self.currentPlaylists[userInput[1]]
-						os.remove(os.path.join(self.dir, userInput[1] +'.xspf'))
-						print userInput[1].strip(), 'deleted.'
+						del self.currentPlaylists[userInput[0]]
+						os.remove(os.path.join(self.dir, userInput[0] +'.xspf'))
+						print userInput[0].strip(), 'deleted.'
 					except (IndexError, KeyError):
 						print 'Playlist not found, nothing deleted.'
-				elif not start == -1 and userInput[1].isdigit():#removing a songID from a playlist
-					songID = rawInput[4:start].strip()
-					plName = rawInput[start+5:].strip()
+				elif not start == -1 and userInput[0].isdigit():#removing a songID from a playlist
+					songID = rawInput[:start].strip()
+					plName = rawInput[start+1:].strip()
 					for item in self.currentPlaylists[plName]:
 						songObject = self.db.lookupSongByLocation(item)
 						if songObject['ID'] == int(songID):
@@ -296,94 +300,103 @@ play <search string>"""
 					if len(self.currentPlaylists[plName]) <= 0:
 						del self.currentPlaylists[plName]
 						print plName, 'is now empty, deleting.'
-							
+						
 				else:
-					print'Usage: del <ID or playlist name> [from <playlist name>] '
-					
-			except IndexError:
-				print'Usage: del <ID or playlist name> [from <playlist name>] '
-			except OSError:#playlist wasn't saved, we don't need to handle this
-				pass
+					self.onecmd('help del')
+				
+		except IndexError:
+			self.onecmd('help del')
+		except OSError:#playlist wasn't saved, we don't need to handle this
+			pass
 			
 		#=============================================================================================
 		#=========== PLAYLIST PRINTING FUNCTION
 		#=============================================================================================
-		elif userInput[0] == 'currentlists' or userInput[0] == "plist":
-			if not self.currentPlaylists:
-				print 'No playlists loaded.'
-			for item in self.currentPlaylists:
-				if not item == 'random':
-					print self.currentPlaylists[item]
+	def do_plist(self, rawInput):
+		"""Prints out the names and contents of every loaded playlist."""
+		if not self.currentPlaylists:
+			print 'No playlists loaded.'
+		for item in self.currentPlaylists:
+			if not item == 'random':
+				print self.currentPlaylists[item]
 		
 		#=============================================================================================
 		#=========== SAVE/LOAD PLAYLISTS
 		#=============================================================================================
-		elif userInput[0] == 'save':
-			plName = rawInput[5:].strip()
-			if plName == 'all':
-				iterator = 0
-				for item in self.currentPlaylists.keys():
-					plName = self.currentPlaylists.keys()[iterator]
-					item = self.currentPlaylists[plName]
-					item.saveToDisk(plName + '.xspf', self.dir)
-					if iterator > len(self.currentPlaylists):
-						break
-					else:
-						iterator +=1
-			else:
-				try:
-					self.currentPlaylists[plName].saveToDisk(plName + '.xspf', self.dir)
-				except KeyError:
-					print 'Playlist not found.'
-		elif userInput[0] == 'load':
-			plName = rawInput[5:].strip()
-			if plName == 'all':
-				self.scanForPlaylists()
-			else:
-				try:
-					if self.currentPlaylists[plName]:
-						print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
-				except KeyError:
-					self.currentPlaylists[plName] = database.playlist(self.db)
+	def do_save(self, rawInput):
+		"""Saves a currently loaded playlist to disk in the workingDir specified in config.yml.
+Syntax: save <playlist name>"""
+		plName = rawInput.strip()
+		if plName == 'all':
+			iterator = 0
+			for item in self.currentPlaylists.keys():
+				plName = self.currentPlaylists.keys()[iterator]
+				item = self.currentPlaylists[plName]
+				item.saveToDisk(plName + '.xspf', self.dir)
+				if iterator > len(self.currentPlaylists):
+					break
+				else:
+					iterator +=1
+		else:
+			try:
+				self.currentPlaylists[plName].saveToDisk(plName + '.xspf', self.dir)
+			except KeyError:
+				print 'Playlist not found.'
+	def do_load(self, rawInput):
+		"""Loads a playlist from the workingDir specified in config.yml.
+Do not specify the .xspf.
+Syntax: load <playlist file name>"""
+		plName = rawInput.strip()
+		if plName == 'all':
+			self.scanForPlaylists()
+		else:
+			try:
+				if self.currentPlaylists[plName]:
 					print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
+			except KeyError:
+				self.currentPlaylists[plName] = database.playlist(self.db)
+				print self.currentPlaylists[plName].loadFromDisk(plName, self.dir)
 		#=============================================================================================
 		#=========== 'DEBUGGING'
 		#=============================================================================================
-		elif userInput[0] == 'crash':
-			raise 'sup bro'
-		elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
-			results = self.db.getListOfSongs()
-			for item in results:
-				if item['length'] == 'Unknown':
-					print 'unknown found! ', item
+	def do_crash(self, rawInput):
+		"""What do you think this does?"""
+		raise 'sup bro'
+#	elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
+#		results = self.db.getListOfSongs()
+#		for item in results:
+#			if item['length'] == 'Unknown':
+#				print 'unknown found! ', item
 		#=============================================================================================
 		#=========== RESCAN LIBRARY
 		#=============================================================================================
-		elif userInput[0] == 'rescan':
-			print 'Remaking library'
-			songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
-			self.scnr.addToDatabase(songList)
+	def do_rescan(self, rawInput):
+		"""Destroys and remakes the library with the contents of the musicDir specified in config.yml."""
+		print 'Remaking library'
+		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+		self.scnr.addToDatabase(songList)
 		#=============================================================================================
 		#=========== MISC FUNCTIONS
 		#=============================================================================================
-		elif userInput[0] == 'stats':
-			library = self.db.getListOfSongs()
-			totalNum = len(library)
-			totalLength = 0
-			libraryLengths = list()
-			for item in library:
-				totalLength += item['length']
-				libraryLengths.append(item['length'])
-			maxLength = max(libraryLengths)
-			avgLength = totalLength / len(library)
-			minLength = min(libraryLengths)
-			print "Total length of songs in library:", self.plyr.secondsToReadableTime(totalLength, False)
-			print 'Total number of songs in library:', totalNum
-			print 'Longest song in library:', self.plyr.secondsToReadableTime(maxLength, False)
-			print 'Shortest song in library:', self.plyr.secondsToReadableTime(minLength, False)
-			print 'Average length of song in library:', self.plyr.secondsToReadableTime(avgLength, False)
+	def do_stats(self, rawInput):
+		"""Prints a number of novelty statistics about your music library."""
+		library = self.db.getListOfSongs()
+		totalNum = len(library)
+		totalLength = 0
+		libraryLengths = list()
+		for item in library:
+			totalLength += item['length']
+			libraryLengths.append(item['length'])
+		maxLength = max(libraryLengths)
+		avgLength = totalLength / len(library)
+		minLength = min(libraryLengths)
+		print "Total length of songs in library:", self.plyr.secondsToReadableTime(totalLength, False)
+		print 'Total number of songs in library:', totalNum
+		print 'Longest song in library:', self.plyr.secondsToReadableTime(maxLength, False)
+		print 'Shortest song in library:', self.plyr.secondsToReadableTime(minLength, False)
+		print 'Average length of song in library:', self.plyr.secondsToReadableTime(avgLength, False)
 	def quitProperly(self):
-		"""docstring for quitProperly"""
+		"""Quits the application, saving all non-temporary playlists."""
 		if not self.currentPlaylists == {}:
 			save = False
 			for item in self.currentPlaylists:
@@ -403,7 +416,6 @@ play <search string>"""
 					else:
 						iterator +=1
 		print "Have a good day, sah!"
-	#	self.db.endSession()
 		quit()
 				
 		
