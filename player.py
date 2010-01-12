@@ -153,12 +153,11 @@ Acceptable formats:
 play random
 play <song ID>
 play <search string>"""
-		print rawInput
 		userInput = rawInput.split(' ')
 		try:
-			if not userInput[0]:
-				pass
-			if userInput[0].isdigit():
+			if not rawInput or rawInput == '':
+				self.plyr.play()
+			elif userInput[0].isdigit():
 				songIDtoPlay = int(userInput[0])
 				self.plyr.playRandom(songIDtoPlay)
 			elif userInput[0] == 'random':
@@ -184,9 +183,7 @@ play <search string>"""
 
 		except ValueError: 
 			pass
-
-		except IndexError:
-			self.plyr.play()
+			
 	def do_pause(self, rawInput):
 		"""Pauses the currently playing song. If nothing is playing, does nothing."""
 		self.plyr.pause()
