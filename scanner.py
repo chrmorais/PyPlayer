@@ -89,27 +89,17 @@ class scanMachine(object):
 			dontvisit: Pass a tuple or list of directories to be ignored. Do not append a slash to the end of each path"""
 			
 		try:
-			dirStack = [startDirectory]
-			doNotVisit = []
+			toBeScanned = list()
 			if dontvisit:
 				for item in dontvisit:
 					doNotVisit.append(item)
-			toBeScanned = []
 
-			while True:
-				try:
-					visitingNow = dirStack.pop()
-					if visitingNow not in doNotVisit:
-						os.chdir(visitingNow)
-						doNotVisit.append(visitingNow)
-						currentDir = os.listdir(os.getcwdu())
-						for item in currentDir:
-							if item.split('.')[-1] in fileTypes:
-								toBeScanned.append(os.path.join(os.getcwdu(), item))
-							elif os.path.isdir(item) and os.path.join(os.getcwdu(), item) not in doNotVisit:
-								dirStack.append(os.path.join(os.getcwdu(), item))
-				except IndexError:
-					break
+
+			for root, dirs, files in os.walk(startDirectory):
+				for item in files:
+					if item.split('.')[-1] in fileTypes:
+						toBeScanned.append(os.path.join(root, item).decode('utf-8'))
+
 		except OSError:
 			print "Start directory not found/invalid. Check your config file!"
 			quit()
@@ -130,14 +120,29 @@ class scanMachine(object):
 		sess.commit()
 
 def main():
-	scanr = scanMachine()
-	songList = scanr.scanForFiles(startDirectory=searchPath, fileTypes=[u'mp3', u'ogg', u'flac'])
+	db = database.database('sqlite:////private/var/root/Working/PyPlayer2/songbase.sqlite')
+	scanr = scanMachine(db)
+	songList = scanr.scanForFiles(startDirectory='/private/var/root/Music/Music', fileTypes=[u'mp3', u'ogg', u'flac'])
 	scanr.addToDatabase(songList)
 if __name__ == '__main__':
 	print 'Don\'t run me! I\'m just a module file! Run player.py and type \"rescan\" to remake the db!'
-#	main()
+	#main()
 
 #the graveyard
+#	while True:
+#		try:
+#			visitingNow = dirStack.pop()
+#			if visitingNow not in doNotVisit:
+#				os.chdir(visitingNow)
+#				doNotVisit.append(visitingNow)
+#				currentDir = os.listdir(os.getcwdu())
+#				for item in currentDir:
+#					if item.split('.')[-1] in fileTypes:
+#						toBeScanned.append(os.path.join(os.getcwdu(), item))
+#					elif os.path.isdir(item) and os.path.join(os.getcwdu(), item) not in doNotVisit:
+#						dirStack.append(os.path.join(os.getcwdu(), item))
+#		except IndexError:
+#			break
 #	self.trackmetas2ID3 = { 
 #	'ID':'ID', 
 #	'title':'TIT2', 
