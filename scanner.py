@@ -85,21 +85,16 @@ class scanMachine(object):
 		"""scans a selected directory downwards recursively for all files of a specified type.
 		Arguments:
 			startDirectory: Pass a unicode string of the full unescaped pathname of the directory to start scanning in.
-			fileTypes: Pass a tuple or list of filetypes to allow, unicode, no period (E.g. mp3 not .mp3)
+			fileTypes: Pass a tuple or list of filetypes to allow, unicode, with a period (E.g. .mp3 not mp3)
 			dontvisit: Pass a tuple or list of directories to be ignored. Do not append a slash to the end of each path"""
 			
 		try:
 			toBeScanned = list()
-			if dontvisit:
-				for item in dontvisit:
-					doNotVisit.append(item)
-
-
+			doNotVisit = list()
 			for root, dirs, files in os.walk(startDirectory):
 				for item in files:
-					if item.split('.')[-1] in fileTypes:
+					if os.path.splitext(item)[-1] in fileTypes and not item in doNotVisit:
 						toBeScanned.append(os.path.join(root, item).decode('utf-8'))
-
 		except OSError:
 			print "Start directory not found/invalid. Check your config file!"
 			quit()
@@ -122,7 +117,7 @@ class scanMachine(object):
 def main():
 	db = database.database('sqlite:////private/var/root/Working/PyPlayer2/songbase.sqlite')
 	scanr = scanMachine(db)
-	songList = scanr.scanForFiles(startDirectory='/private/var/root/Music/Music', fileTypes=[u'mp3', u'ogg', u'flac'])
+	songList = scanr.scanForFiles(startDirectory='/private/var/root/Music/Music', fileTypes=[u'.mp3', u'.ogg', u'.flac'])
 	scanr.addToDatabase(songList)
 if __name__ == '__main__':
 	print 'Don\'t run me! I\'m just a module file! Run player.py and type \"rescan\" to remake the db!'

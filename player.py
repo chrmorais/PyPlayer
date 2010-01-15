@@ -93,11 +93,11 @@ class commandShell(cmd.Cmd):
 
 	def scanForChanges(self):
 		"""Checks the current music folder vs. the current database. Any changes are merged in automatically."""
-		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'.mp3', u'.ogg', u'.flac'])
 		if not self.db.isDBThere():
 			print 'Database not there!~\nRemaking library'
 			self.db.metadata.create_all(self.db.conn)
-			remakeList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+			remakeList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'.mp3', u'.ogg', u'.flac'])
 			self.scnr.addToDatabase(remakeList)
 		else:#DB appears OK, let's compare and fix!
 			oldSongList = self.db.getListOfSongs(locations=True)
@@ -106,11 +106,11 @@ class commandShell(cmd.Cmd):
 					print self.db.addItemByLocation(item)
 			for item in oldSongList:
 				if item not in songList:
-					print self.db.deleteItem(item['location'])
+					print self.db.deleteItem(item)
 		return 
 	def scanForPlaylists(self):
 		"""Scans the current working directory (ie the script directory) recursively for playlists and loads them."""
-		listOfPlaylists = self.scnr.scanForFiles(startDirectory=self.dir, fileTypes=['xspf'], dontvisit=[])
+		listOfPlaylists = self.scnr.scanForFiles(startDirectory=self.dir, fileTypes=['.xspf'], dontvisit=[])
 		for item in listOfPlaylists:
 			plName = os.path.split(item)[-1].split('.')[0]
 			if not plName == 'random':
@@ -370,7 +370,7 @@ Syntax: load <playlist file name>"""
 	def do_rescan(self, rawInput):
 		"""Destroys and remakes the library with the contents of the musicDir specified in config.yml."""
 		print 'Remaking library'
-		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'mp3', u'ogg', u'flac'])
+		songList = self.scnr.scanForFiles(startDirectory=self.musicDir, fileTypes=[u'.mp3', u'.ogg', u'.flac'])
 		self.scnr.addToDatabase(songList)
 		#=============================================================================================
 		#=========== MISC FUNCTIONS
