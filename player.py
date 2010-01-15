@@ -33,29 +33,13 @@ import fcntl
 import struct
 import yaml
 import cmd
+import time
 
 #So, you ignored that STERN warning on the github page, eh? Well, I'm very flattered, but you're in for a bumpy ride. Ok, heres what you need to do:
 #edit the config file, insert paths where directed. Install packages as necessary to fufill packages required for the above imports. Also toss in sqlite3. Then run me, song db should be created automatically.
 runType = 'debug' #currently does nothing much, it's a placeholder! :O
+appVersion = 0.5
 
-try:
-	fileObj = open(os.path.join(os.getcwdu() + '/config.yml'))
-except IOError:
-	print 'Config file not found. Give it back!'
-	print 'Lost it? Find a copy on http://github.com/ripdog/PyPlayer/raw/master/config.yml'
-	quit()
-try:
-	config = yaml.load(fileObj)[runType]
-except:#Too many errors to catch individually. In any case, if this fails, the file is likely borked.
-	print 'Config file corrupt!'
-	print 'Grab a new copy from http://github.com/ripdog/PyPlayer/raw/master/config.yml'
-	quit()
-spam = config['spam']
-appName = config['appName']
-workingDir = config['workingDir']
-musicDir = config['musicDir']
-dbFileName = config['dbFileName']
-dbLocation = 'sqlite:///' + os.path.join(workingDir, dbFileName)
 
 def getHeightAndWidth():
 	"""Returns the size of the terminal in the format rows, cols, x pixels, y pixels"""
@@ -72,24 +56,77 @@ def uniMe(obj, encoding='utf-8'):
 
 class commandShell(cmd.Cmd):
 	def __init__(self, completekey='tab', stdin=None, stdout=None):
+		initalTime = time.clock()
+		print "".center(62, "=")
+		print '=============== Beginning startup of PyPlayer ' + str(float(appVersion))
+		print ''.center(62, '=')
+		#load config variables from file
+		sys.stdout.write('Loading config from config.yml... ' + '\r')
+		sys.stdout.flush()
+		try:
+			fileObj = open(os.path.join(os.getcwdu() + '/config.yml'))
+		except IOError:
+			print 'Config file not found. Give it back!'
+			print 'Lost it? Find a copy on http://github.com/ripdog/PyPlayer/raw/master/config.yml'
+			quit()
+		try:
+			config = yaml.load(fileObj)[runType]
+		except:#Too many errors to catch individually. In any case, if this fails, the file is likely borked.
+			print 'Config file corrupt!'
+			print 'Grab a new copy from http://github.com/ripdog/PyPlayer/raw/master/config.yml'
+			quit()
+		spam = config['spam']
+		appName = config['appName']
+		workingDir = config['workingDir']
+		musicDir = config['musicDir']
+		dbFileName = config['dbFileName']
+		dbLocation = 'sqlite:///' + os.path.join(workingDir, dbFileName)
+		print 'Loading config from config.yml... Done'
+		#=========================================================================
+		sys.stdout.write('Initalizing variables...' + '\r')
+		sys.stdout.flush()
 		self.exit = False
 		self.currentPlaylists = dict()
-		self.db = db = database.database(dbLocation)
-
-		self.plyr = player(self.db, self)
-		self.dir = workingDir
-		self.musicDir = musicDir
-		self.scnr = scanner.scanMachine(self.db)
-		print 'Scanning playlists'
-		self.scanForPlaylists()
-		print 'Scanning for changes to music'
-		self.scanForChanges()
-		self.intro = None
+		self.intro = 'Common commands: play, search, pause, next, prev. Type help for full listing, and help <command> for more help.'
 		self.stdin = sys.stdin
 		self.stdout = sys.stdout
 		self.cmdqueue = []
 		self.completekey = completekey
 		self.use_rawinput = True
+		self.spam = spam
+		#=========================================================================
+		print "Initalizing variables...Done"
+		sys.stdout.write('Initalizing database at ' + dbFileName + '...' + '\r')
+		sys.stdout.flush()
+		self.db = db = database.database(dbLocation)
+		print 'Initalizing database at ' + dbFileName + '...' + 'Done'
+		#=========================================================================
+		self.appName = appName
+		sys.stdout.write('Initalizing player... ' + '\r')
+		sys.stdout.flush()
+		self.plyr = player(self.db, self)
+		print 'Initalizing player...Done'
+		#=========================================================================
+		self.dir = workingDir
+		self.musicDir = musicDir
+		sys.stdout.write('Initalizing scanner... ' + '\r')
+		sys.stdout.flush()
+		self.scnr = scanner.scanMachine(self.db)
+		print 'Initalizing scanner...Done'
+		#=========================================================================
+		sys.stdout.write('Scanning playlists... ' + '\r')
+		sys.stdout.flush()
+		self.scanForPlaylists()
+		print 'Scanning playlists...Done'
+		#=========================================================================
+		sys.stdout.write('Scanning for library changes... ' + '\r')
+		sys.stdout.flush()
+		self.scanForChanges()
+		print 'Scanning for library changes...Done'
+		finalTime = time.clock()
+		difference = finalTime - initalTime
+		print "Startup took " + str(difference) + " seconds. Nice!"
+
 
 	def scanForChanges(self):
 		"""Checks the current music folder vs. the current database. Any changes are merged in automatically."""
@@ -465,7 +502,7 @@ class player(object):
 		bus.add_signal_watch()
 		bus.connect("message", self.on_message)
 		self.time_format = gst.Format(gst.FORMAT_TIME)
-		self.growl = Growl.GrowlNotifier(applicationName=appName, notifications=['Song change'], defaultNotifications=['Song change'])
+		self.growl = Growl.GrowlNotifier(applicationName=self.cmdSh.appName, notifications=['Song change'], defaultNotifications=['Song change'])
 		self.growl.register()
 		
 	def primePlayer(self, location):
@@ -566,7 +603,7 @@ class player(object):
 				if gst.STATE_PLAYING == self.player.get_state()[1]:
 					pos_int = self.player.query_position(self.time_format, None)[0]
 					PositionString = self.secondsToReadableTime(pos_int, True)
-					if spam:
+					if self.cmdSh.spam:
 						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\r'
 						if isinstance(stringToWrite, unicode):
 							stringToWrite = stringToWrite.encode('utf-8')
