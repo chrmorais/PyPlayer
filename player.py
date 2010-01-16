@@ -474,6 +474,7 @@ class player(object):
 		if 'random' in self.cmdSh.currentPlaylists.keys():
 			if not startWith == None:
 				self.playLocation(self.dbName.getLocationByID(startWith))
+			random.shuffle(self.cmdSh.currentPlaylists['random'])
 			self.playAList('random', 0)
 		else:
 			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
