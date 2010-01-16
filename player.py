@@ -429,6 +429,22 @@ Syntax: load <playlist file name>"""
 		print 'Longest song in library:', self.plyr.secondsToReadableTime(maxLength, False)
 		print 'Shortest song in library:', self.plyr.secondsToReadableTime(minLength, False)
 		print 'Average length of song in library:', self.plyr.secondsToReadableTime(avgLength, False)
+	def do_dups(self, rawInput):
+		songList = self.db.getListOfSongs()
+		for item in songList:
+			songList[songList.index(item)] = item['title']
+		secondList = list()
+		dups = list()
+		while True:
+			try:
+				compareMe = songList.pop()
+				if compareMe in secondList:
+					dups.append(compareMe)
+				secondList.append(compareMe)
+			except IndexError:
+				break
+		for item in dups:
+			print item
 	def quitProperly(self):
 		"""Quits the application, saving all non-temporary playlists."""
 		if not self.currentPlaylists == {}:
