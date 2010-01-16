@@ -4,8 +4,6 @@
 '''
 untitled.py
 
-Created by Mitchell Ferguson on 2009-12-11.
-Copyright (c) 2009 __MyCompanyName__. All rights reserved.
 '''
 
 import sys

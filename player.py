@@ -472,7 +472,8 @@ Syntax: load <playlist file name>"""
 					
 					
 class player(object):
-	def playLocation(self, location):
+	def playLocation(self, nothing, location):
+		print location
 		self.dbName.pprintByLocation(location)
 		self.primePlayer(location)
 		self.play()
@@ -484,12 +485,12 @@ class player(object):
 	#		print  self.cmdSh.currentPlaylists[listname]
 		self.currentList = listname
 		playMe = self.cmdSh.currentPlaylists[listname][index]
-		self.playLocation(playMe)
+		self.playLocation(None, playMe)
 
 	def playRandom(self, startWith=None):
 		if 'random' in self.cmdSh.currentPlaylists.keys():
 			if not startWith == None:
-				self.playLocation(self.dbName.getLocationByID(startWith))
+				self.playLocation(None, self.dbName.getLocationByID(startWith))
 			random.shuffle(self.cmdSh.currentPlaylists['random'])
 			self.playAList('random', 0)
 		else:
@@ -500,7 +501,7 @@ class player(object):
 		#	self.cmdSh.currentPlaylists['random'].randomize()
 			random.shuffle(self.cmdSh.currentPlaylists['random'])
 			if not startWith == None:
-				self.playLocation(self.dbName.getLocationByID(startWith))
+				self.playLocation(None, self.dbName.getLocationByID(startWith))
 			else:
 				self.playAList('random')
 
