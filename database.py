@@ -75,7 +75,7 @@ class database(object):
 		This function creates the database if necessary."""
 		sess = self.sessionMaker()
 		try:
-			songID = sess.query(songfromdb).count() + 1
+			songID = sess.query(songfromdb).order_by(songfromdb.ID).all()[-1].ID + 1
 		except sqlalchemy.exc.OperationalError:
 			songID = 1
 		insertList = []
@@ -210,7 +210,7 @@ class database(object):
 		sess = self.sessionMaker()
 		item = scanner.song(location)
 		if not item.doNotAdd:
-			songID = sess.query(songfromdb).count() + 1
+			songID = sess.query(songfromdb).order_by(songfromdb.ID).all()[-1].ID + 1
 			insertSong = songfromdb(songID, item.meta['title'], item.meta['album'], item.meta['artist'], item.meta['date'], item.meta['genre'], item.meta['location'], item.meta['length'])
 			sess.add(insertSong)
 		sess.commit()
