@@ -198,11 +198,11 @@ play <search string>"""
 				songIDtoPlay = int(userInput[0])
 				self.plyr.playRandom(songIDtoPlay)
 			elif userInput[0] == 'random':
-				self.plyr.playRandom()
+				self.plyr.playRandom(None)
 			elif userInput[0] in self.currentPlaylists:
 				#is it a playlist name?
 				print  self.currentPlaylists[userInput[0]]
-				self.plyr.playAList(userInput[0])
+				self.plyr.playAList(None, userInput[0])
 			else:#must be a search query, let's make a temporary playlist with the results and play that
 				randomName = [u'temp', unicode(random.getrandbits(50))]
 				randomName = ''.join(randomName)
@@ -212,7 +212,7 @@ play <search string>"""
 					for song in searchResults:
 						self.currentPlaylists[randomName].add(song['location'], True)
 					print self.currentPlaylists[randomName]
-					self.plyr.playAList(randomName)
+					self.plyr.playAList(None, randomName)
 				else:#no results found, obviously
 					print 'No results found, try harder.'
 
@@ -278,6 +278,7 @@ Syntax: search <search terms>"""
 		"""Adds an ID or the results of a search term to a playlist.
 Playlist is created if not already existing.
 Syntax: add <ID or search string> to <playlist name>"""
+		userInput = rawInput.split(' 8')
 		try:
 			end = rawInput.find('to')#Some shitty parsing here, assumes everything between the 4th character and the word "to" is the search query or ID,
 			# and everything past the word "to" (end+3) is the playlist name. Hey, it works
@@ -296,7 +297,7 @@ Syntax: add <ID or search string> to <playlist name>"""
 				except KeyError:
 					self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
 					print "Created", playlistName
-				if userInput[1].isdigit():
+				if userInput[0].isdigit():
 					self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
 					
 				else:
@@ -361,6 +362,8 @@ Syntax: del <ID or playlist name> [from <playlist name>]"""
 		"""Saves a currently loaded playlist to disk in the workingDir specified in config.yml.
 Syntax: save <playlist name>"""
 		plName = rawInput.strip()
+		if isinstance(plName, str):
+			plName = plName.decode('utf-8')
 		if plName == 'all':
 			iterator = 0
 			for item in self.currentPlaylists.keys():
@@ -477,7 +480,7 @@ class player(object):
 		self.dbName.pprintByLocation(location)
 		self.primePlayer(location)
 		self.play()
-	def playAList(self, listname, index=0):
+	def playAList(self, nothing, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
 	#	if type(listname) == basestring:
 	#		listname = self.cmdSh.currentPlaylists[listname]
@@ -487,12 +490,12 @@ class player(object):
 		playMe = self.cmdSh.currentPlaylists[listname][index]
 		self.playLocation(None, playMe)
 
-	def playRandom(self, startWith=None):
+	def playRandom(self, nothing, startWith=None):
 		if 'random' in self.cmdSh.currentPlaylists.keys():
 			if not startWith == None:
 				self.playLocation(None, self.dbName.getLocationByID(startWith))
 			random.shuffle(self.cmdSh.currentPlaylists['random'])
-			self.playAList('random', 0)
+			self.playAList(None, 'random', 0)
 		else:
 			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
 			songList = self.dbName.getListOfSongs()
@@ -503,7 +506,7 @@ class player(object):
 			if not startWith == None:
 				self.playLocation(None, self.dbName.getLocationByID(startWith))
 			else:
-				self.playAList('random')
+				self.playAList(None, 'random')
 
 
 #=============================================================================================
@@ -574,28 +577,28 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.currentList == None or self.currentList =='':
-			self.playRandom()
+			self.playRandom(None)
 			return
 		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
 		if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
 			if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
-				self.playRandom()
+				self.playRandom(None)
 			else:
-				self.playAList(self.currentList, index=0) #loop the playlist
+				self.playAList(None, self.currentList, index=0) #loop the playlist
 		else:
-			self.playAList(self.currentList, index=nextSongIndex)
+			self.playAList(None, self.currentList, index=nextSongIndex)
 
 	def playPrevious(self):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.currentList == None or self.currentList =='':
-			self.playRandom()
+			self.playRandom(None)
 			return
 		prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
 		if prevSongIndex < 0:
-			self.playAList(self.currentList, index=-1) #play the last song
+			self.playAList(None, self.currentList, index=-1) #play the last song
 		else:
-			self.playAList(self.currentList, index=prevSongIndex)
+			self.playAList(None, self.currentList, index=prevSongIndex)
 	#=============================================================================================
 	#=========== PLAY THREAD FUNCTION
 	#=============================================================================================

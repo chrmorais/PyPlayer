@@ -284,7 +284,8 @@ class playlist(list):
 		xml.start('trackList')
 
 		for line in self:
-			line = uniMe(line)
+			if isinstance(line, unicode):
+				line = line.encode('utf-8')
 			url = 'file://' + urllib.pathname2url(line)
 			xml.start('track')
 			xml.elem('location', url)
