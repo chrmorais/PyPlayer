@@ -214,7 +214,7 @@ play <search string>"""
 					#print self.currentPlaylists[randomName]
 					self.plyr.playAList(None, randomName)
 				else:#no results found, obviously
-					self.mainScreen.setStatus('No results found for play.')
+					self.mainScreen.setStatus((None, 'No results found for play.'))
 
 
 
@@ -232,6 +232,7 @@ If no playlist is loaded, does nothing."""
 	def do_prev(self, rawInput):
 		"""Plays the song before the currently playing song in a playlist. If at the beginning of a list, plays the final song. If no playlist loaded, does nothing."""
 		self.plyr.playPrevious()
+#		self.mainScreen.setStatus()
 	def do_p(self, rawInput):
 		"Either plays or pauses playback based on wether we are currently playing or paused."
 		self.plyr.playPause()
@@ -303,8 +304,11 @@ Syntax: add <ID or search string> to <playlist name>"""
 				else:
 					searchQuery = rawInput[4:end-1]
 					results = self.db.searchForSongs(searchQuery)
-					for item in results:
-						self.currentPlaylists[playlistName].add(item['location'])
+					if not results == None:
+						for item in results:
+							self.currentPlaylists[playlistName].add(item['location'])
+					else:
+						self.mainScreen.setStatus((None, 'No results found.'))
 		except (IndexError):
 			self.onecmd('help add')
 	def do_del(self, rawInput):
@@ -399,11 +403,7 @@ Syntax: load <playlist file name>"""
 	def do_crash(self, rawInput):
 		"""What do you think this does?"""
 		raise 'sup bro'
-#	elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
-#		results = self.db.getListOfSongs()
-#		for item in results:
-#			if item['length'] == 'Unknown':
-#				print 'unknown found! ', item
+
 		#=============================================================================================
 		#=========== RESCAN LIBRARY
 		#=============================================================================================
@@ -415,23 +415,26 @@ Syntax: load <playlist file name>"""
 		#=============================================================================================
 		#=========== MISC FUNCTIONS
 		#=============================================================================================
-	#def do_stats(self, rawInput):
-	#	"""Prints a number of novelty statistics about your music library."""
-	#	library = self.db.getListOfSongs()
-	#	totalNum = len(library)
-	#	totalLength = 0
-	#	libraryLengths = list()
-	#	for item in library:
-	#		totalLength += item['length']
-	#		libraryLengths.append(item['length'])
-	#	maxLength = max(libraryLengths)
-	#	avgLength = totalLength / len(library)
-	#	minLength = min(libraryLengths)
-	#	print "Total length of songs in library:", self.plyr.secondsToReadableTime(totalLength, False)
-	#	print 'Total number of songs in library:', totalNum
-	#	print 'Longest song in library:', self.plyr.secondsToReadableTime(maxLength, False)
-	#	print 'Shortest song in library:', self.plyr.secondsToReadableTime(minLength, False)
-	#	print 'Average length of song in library:', self.plyr.secondsToReadableTime(avgLength, False)
+	def do_stats(self, rawInput):
+		"""Prints a number of novelty statistics about your music library."""
+		library = self.db.getListOfSongs()
+		totalNum = len(library)
+		totalLength = 0
+		libraryLengths = list()
+		for item in library:
+			totalLength += item['length']
+			libraryLengths.append(item['length'])
+		maxLength = max(libraryLengths)
+		avgLength = totalLength / len(library)
+		minLength = min(libraryLengths)
+		returnList = list()
+		returnList.append("Total length of lib: " + self.plyr.secondsToReadableTime(totalLength, False) + " | ")
+		returnList.append('Total number of songs: ' + str(totalNum) + " | ")
+		returnList.append('Longest song: ' + self.plyr.secondsToReadableTime(maxLength, False) + " | ")
+		returnList.append('Shortest song: '+ self.plyr.secondsToReadableTime(minLength, False) + " | ")
+		returnList.append('Average length: ' + self.plyr.secondsToReadableTime(avgLength, False))
+		returnString = ''.join(returnList)
+		self.mainScreen.setStatus((None, returnString))
 	def do_dups(self, rawInput):
 		songList = self.db.getListOfSongs()
 		for item in songList:
@@ -461,14 +464,7 @@ Syntax: load <playlist file name>"""
 				#if saveLists.lower().strip() in ['y', 'yes', 'ok']:
 				iterator = 0
 				for item in self.currentPlaylists.keys():
-					plName = self.currentPlaylists.keys()[iterator]
-					item = self.currentPlaylists[plName]
-					item.saveToDisk(plName + '.xspf', self.dir)
-					if iterator > len(self.currentPlaylists):
-						break
-					else:
-						iterator +=1
-		self.mainScreen.setStatus("Have a good day, sah!")
+					self.currentPlaylists[item].saveToDisk(item + '.xspf', self.dir)
 		self.mainScreen.quitTime()
 		quit()
 
@@ -482,10 +478,7 @@ class player(object):
 		self.play()
 	def playAList(self, nothing, listname, index=0):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
-	#	if type(listname) == basestring:
-	#		listname = self.cmdSh.currentPlaylists[listname]
-	#	if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
-	#		print  self.cmdSh.currentPlaylists[listname]
+
 		self.currentList = listname
 		playMe = self.cmdSh.currentPlaylists[listname][index]
 		self.playLocation(None, playMe)
@@ -607,12 +600,14 @@ class player(object):
 	#old progress indicators rather than just two. Or just compare duration and position <3
 		while not gst.STATE_PLAYING == self.player.get_state()[1]:
 			time.sleep(.1)
+		self.mainScreen.setStatus("reset")
 		while True:
 			try:
 				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
 				break
 			except gst.QueryError:
 			#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 1 second.
+				#self.mainScreen.setStatus((None, "I like monkeys"))
 				try:
 					DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 1, False)
 				except TypeError:
@@ -620,35 +615,29 @@ class player(object):
 				break
 		songInfo = self.dbName.pprintByLocation(self.currentlyPlaying['location'])
 		while True:
-			try:			
-			
-				if gst.STATE_PLAYING == self.player.get_state()[1]:
-					pos_int = self.player.query_position(self.time_format, None)[0]
-					PositionString = self.secondsToReadableTime(pos_int, True)
-					if self.cmdSh.spam:
-						stringToWrite = self.currentlyPlaying['title'] + ': ' + PositionString + " of " + DurationString + '\n' +\
-						'Playing: ' + songInfo
-						if isinstance(stringToWrite, unicode):
-							stringToWrite = stringToWrite.encode('utf-8')
-						termSize = getHeightAndWidth()
-					#	self.mainScreen.setStatus(((' ' * termSize[1]) + '\r')#what we do here is clear the entire line. 
-					#	sys.stdout.flush()
-						self.mainScreen.setStatus(stringToWrite)
-						#sys.stdout.flush()
-						oldString = stringToWrite
-					if DurationString == PositionString:
-						if self.currentlyPlaying == None:
-							pass
-						else:
-							self.playNext()
-							break
-				elif gst.STATE_PAUSED == self.player.get_state()[1]: 
-					pass#Don't die during pause
-				elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
-					break
-				time.sleep(1)
-			except OSError, e:
-				self.mainScreen.setStatus('Error detected: ' + e)
+			#try:			
+			if gst.STATE_PLAYING == self.player.get_state()[1]:
+				pos_int = self.player.query_position(self.time_format, None)[0]
+				PositionString = self.secondsToReadableTime(pos_int, True)
+				stringToWrite = (('Playing: ' + PositionString + " of " + DurationString),  songInfo)
+				self.mainScreen.setStatus(stringToWrite, True)
+				if DurationString == PositionString:
+					if self.currentlyPlaying == None:
+						pass
+					else:
+						self.playNext()
+						break
+			elif gst.STATE_PAUSED == self.player.get_state()[1]: 
+				pos_int = self.player.query_position(self.time_format, None)[0]
+				PositionString = self.secondsToReadableTime(pos_int, True)
+				stringToWrite = (('Paused: ' + PositionString + " of " + DurationString),  songInfo)
+				self.mainScreen.setStatus(stringToWrite, True)
+			elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
+				self.mainScreen.setStatus(('Nothing playing.', ""))
+				break
+			time.sleep(1)
+			#except OSError, e:
+			#	self.mainScreen.setStatus('Error detected: ' + e)
 				
 	#=============================================================================================
 	#=========== MISC FUNCTIONS
@@ -668,7 +657,7 @@ class player(object):
 			self.unprimePlayer()
 		elif t == gst.MESSAGE_ERROR: #ohshit! Still, little difference to previous mode
 			err, debug = message.parse_error()
-			self.mainScreen.setStatus("Error: %s" % err, debug)
+			self.mainScreen.setStatus((None, "Error: %s" % err, debug))
 			self.unprimePlayer()
 	
 
@@ -684,8 +673,21 @@ if __name__ == "__main__":
 	
 	
 #the graveyard
-
-
+#	elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
+#		results = self.db.getListOfSongs()
+#		for item in results:
+#			if item['length'] == 'Unknown':
+#				print 'unknown found! ', item
+#termSize = getHeightAndWidth()
+#						oldString = stringToWrite
+#if isinstance(stringToWrite, unicode):
+#	stringToWrite = stringToWrite.encode('utf-8')
+#	self.mainScreen.setStatus(((' ' * termSize[1]) + '\r')#what we do here is clear the entire line. 
+#	sys.stdout.flush()
+#	if type(listname) == basestring:
+#		listname = self.cmdSh.currentPlaylists[listname]
+#	if index == 0 and not listname == 'random':#only print entire playlist when beginning to play it
+#		print  self.cmdSh.currentPlaylists[listname]
 #	if DurationString == None:
 #		print 'Unable to calculate duration of song. Stopping playback.'
 #		print self.currentlyPlaying
