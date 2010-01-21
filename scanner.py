@@ -1,6 +1,5 @@
 #!/usr/bin/python2.6
-
-# encoding: utf-8
+# coding:UTF-8
 '''
 untitled.py
 

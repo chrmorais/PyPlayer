@@ -1,6 +1,5 @@
 #!/usr/bin/python2.6
-
-# encoding: utf-8
+# coding:UTF-8
 #TODO:
 #Command shell with regexes
 #ncurses interface
@@ -194,11 +193,11 @@ play <search string>"""
 		try:
 			if not rawInput or rawInput == '':
 				self.plyr.play()
-			elif userInput[0].isdigit():
-				songIDtoPlay = int(userInput[0])
-				self.plyr.playRandom(songIDtoPlay)
-			elif userInput[0] == 'random':
-				self.plyr.playRandom(None)
+	#		elif userInput[0].isdigit():
+	#			songIDtoPlay = int(userInput[0])
+	#			self.plyr.playAList(startWith=songIDtoPlay)
+		#	elif userInput[0] == 'random':
+		#		self.plyr.playAList(None, 'random')
 			elif userInput[0] in self.currentPlaylists:
 				#is it a playlist name?
 				#print  self.currentPlaylists[userInput[0]]
@@ -297,9 +296,11 @@ Syntax: add <ID or search string> to <playlist name>"""
 						pass
 				except KeyError:
 					self.currentPlaylists[playlistName] = database.playlist(self.db, playlistName)
+					self.mainScreen.scanPlaylists()
 					#print "Created", playlistName
 				if userInput[0].isdigit():
 					self.currentPlaylists[playlistName].add(self.db.getLocationByID(userInput[1]))
+					
 
 				else:
 					searchQuery = rawInput[4:end-1]
@@ -325,20 +326,22 @@ Syntax: del <ID or playlist name> [from <playlist name>]"""
 					try:
 						del self.currentPlaylists[userInput[0]]
 						os.remove(os.path.join(self.dir, userInput[0] +'.xspf'))
-						self.mainScreen.setStatus(userInput[0].strip() + 'deleted.')
+						self.mainScreen.scanPlaylists()
+						self.mainScreen.setStatus((None, userInput[0].strip() + 'deleted.'))
 					except (IndexError, KeyError):
-						self.mainScreen.setStatus('Playlist not found, nothing deleted.')
+						self.mainScreen.setStatus((None, 'Playlist not found, nothing deleted.'))
 				elif not start == -1 and userInput[0].isdigit():#removing a songID from a playlist
 					songID = rawInput[:start].strip()
 					plName = rawInput[start+1:].strip()
 					for item in self.currentPlaylists[plName]:
 						songObject = self.db.lookupSongByLocation(item)
 						if songObject['ID'] == int(songID):
-							self.mainScreen.setStatus(songObject['title'], 'removed from ', plName)
+							self.mainScreen.setStatus((None, songObject['title']+ 'removed from '+ plName))
 							self.currentPlaylists[plName].remove(item)
 					if len(self.currentPlaylists[plName]) <= 0:
 						del self.currentPlaylists[plName]
-						self.mainScreen.setStatus(plName, 'is now empty, deleting.')
+						self.mainScreen.scanPlaylists()
+						self.mainScreen.setStatus((None, plName + 'is now empty, deleting.'))
 
 				else:
 					self.onecmd('help del')
@@ -472,36 +475,53 @@ Syntax: load <playlist file name>"""
 					
 					
 class player(object):
-	def playLocation(self, nothing, location):
-		self.dbName.pprintByLocation(location)
+	def playLocation(self, nothing, location, moveToTop=False):
+		if moveToTop:		
+			for item in self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList]:
+				if item == location:
+					song = self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList].index(item)
+					self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList].reverse()#reverse for performance reasons
+					del self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList][song]
+					self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList].append(location)
+					self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList].reverse()#selected song is now at the beginning of the list
 		self.primePlayer(location)
+		self.cmdSh.mainScreen.renderList()
+		self.dbName.pprintByLocation(location)
+		
 		self.play()
-	def playAList(self, nothing, listname, index=0):
+	def playAList(self, nothing, listname='random', index=0, startWith=None):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
-
+		if isinstance(listname, list):
+			index = listname[1]
+			startWith = listname[2]
+			listname = listname[0]
 		self.currentList = listname
-		playMe = self.cmdSh.currentPlaylists[listname][index]
-		self.playLocation(None, playMe)
-
-	def playRandom(self, nothing, startWith=None):
-		if 'random' in self.cmdSh.currentPlaylists.keys():
-			if not startWith == None:
-				self.playLocation(None, self.dbName.getLocationByID(startWith))
-			random.shuffle(self.cmdSh.currentPlaylists['random'])
-			self.playAList(None, 'random', 0)
-		else:
-			self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
-			songList = self.dbName.getListOfSongs()
-			for item in songList:
-				self.cmdSh.currentPlaylists['random'].append(item['location'])
-		#	self.cmdSh.currentPlaylists['random'].randomize()
-			random.shuffle(self.cmdSh.currentPlaylists['random'])
-			if not startWith == None:
-				self.playLocation(None, self.dbName.getLocationByID(startWith))
+		if listname == 'random':
+			if 'random' in self.cmdSh.currentPlaylists.keys():
+				if not startWith == None:
+					self.playLocation(None, startWith, True)#What we should do here is find the selected song in the shuffle PL and move it to the top
+				else:
+					random.shuffle(self.cmdSh.currentPlaylists['random'])
+					self.playLocation(None, self.cmdSh.currentPlaylists[listname][index], True)
 			else:
-				self.playAList(None, 'random')
+				self.createRandomList()
+				random.shuffle(self.cmdSh.currentPlaylists['random'])
+				if not startWith == None:
+					self.playLocation(None, startWith)
+				else:
+					self.playLocation(None, self.cmdSh.currentPlaylists[listname][index])
+		else:
+			if not startWith == None:
+				self.playLocation(None, startWith)
+			else:
+				self.playLocation(None, self.cmdSh.currentPlaylists[listname][index])
 
-
+	def createRandomList(self):
+		self.cmdSh.currentPlaylists['random'] = database.playlist(self.dbName, 'random')
+		songList = self.dbName.getListOfSongs()
+		for item in songList:
+			self.cmdSh.currentPlaylists['random'].append(item['location'])
+		
 #=============================================================================================
 #=========== EASY FUNCTIONS ABOVE - THAR BE DRAGONS BELOW
 #=============================================================================================
@@ -510,7 +530,7 @@ class player(object):
 		self.mainScreen = mainScreen
 		self.dbName = dbName
 		self.cmdSh = cmdSh
-		self.currentList = None
+		self.currentList = 'random'
 		self.currentlyPlaying = None
 		self.player = gst.element_factory_make("playbin", "player")
 		bus = self.player.get_bus()
@@ -571,12 +591,12 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.currentList == None or self.currentList =='':
-			self.playRandom(None)
+			self.playAList(None, 'random')
 			return
 		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
 		if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
 			if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
-				self.playRandom(None)
+				self.playAList(None, 'random')
 			else:
 				self.playAList(None, self.currentList, index=0) #loop the playlist
 		else:
@@ -586,7 +606,7 @@ class player(object):
 		lastPlayed = self.currentlyPlaying
 		self.unprimePlayer()
 		if self.currentList == None or self.currentList =='':
-			self.playRandom(None)
+			self.playAList(None, 'random')
 			return
 		prevSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) - 1
 		if prevSongIndex < 0:
