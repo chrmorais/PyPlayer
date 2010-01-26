@@ -1,5 +1,7 @@
 #!/usr/bin/python2.6
 # coding:UTF-8
+#TODO: Run play thread constantly. quitting and remaking it is unnecessary
+#Every non-playback message resets second status line timer
 
 """
 main.py
@@ -98,14 +100,12 @@ class mainDisplay(object):
 		songDictList = [item for item in songList if item['location'] in commandSh.currentPlaylists[commandSh.plyr.currentList]]
 		self.currentSongWidgets = self.createList(songDictList)
 		self.mainListContent = urwid.SimpleListWalker([urwid.AttrMap(w, None, 'reveal focus') for w in self.currentSongWidgets])
-		if not commandSh.plyr.currentList == 'random':
-			print self.mainList.body
-			os.system('clear')
+	#	if not commandSh.plyr.currentList == 'random':
+	#		print self.mainList.body
+	#		os.system('clear')
 		#	raise urwid.ExitMainLoop
-		self.mainList = urwid.ListBox(self.mainListContent)
-		self.columns = urwid.Columns([self.mainList, self.secondaryList])
-		self.pile = urwid.Pile([self.columns, ("fixed", 1, self.statusDisplayOne), ("fixed", 1, self.statusDisplayTwo), ("fixed", 1, self.cmdShInterface)], 3)
-		self.topFrame = urwid.Frame(self.pile)
+		#
+
 		#loop.draw_screen()
 	def createList(self, songs):
 		"""Pass me a list of song dicts (as returned by getListOfSongs() and the song lookup functions) and I will create a list of songWidgets to stick in a listwalker. """
@@ -127,24 +127,28 @@ class mainDisplay(object):
 			return
 		if not isinstance(message, tuple):
 			raise TypeError, "setStatus only takes tuples!"
-		if not message[0] == None:
-			self.statusDisplayOne.original_widget.set_text(message[0])
-		if not message[1] == None:
-			if songInfo and self.showPlayback[0]:
-				self.statusDisplayTwo.original_widget.set_text(message[1])
-			elif songInfo and not self.showPlayback[0]:#This triggers when we are trying to display song info, but other info is being displayed atm.
-				difference = time.clock() - self.showPlayback[1]#So we check how long this info has been there for
-			#	self.statusDisplayTwo.original_widget.set_text(str(difference))
-				if difference > 0.4:
-					self.showPlayback = [True, 0]#if it's hung around for longer than 10 secs, put the playback info back.
+		try:
+			if not message[0] == None:
+				self.statusDisplayOne.original_widget.set_text(message[0])
+			if not message[1] == None:
+				if songInfo and self.showPlayback[0]:
 					self.statusDisplayTwo.original_widget.set_text(message[1])
-			else:#it isn't song info
-				if not self.showPlayback[0]:
-					self.statusDisplayTwo.original_widget.set_text(message[1])
-				else:
-					self.showPlayback = [False, time.clock()]
-					self.statusDisplayTwo.original_widget.set_text(message[1])
-		loop.draw_screen()
+				elif songInfo and not self.showPlayback[0]:#This triggers when we are trying to display song info, but other info is being displayed atm.
+					difference = time.clock() - self.showPlayback[1]#So we check how long this info has been there for
+				#	self.statusDisplayTwo.original_widget.set_text(str(difference))
+					if difference > 0.4:
+						self.showPlayback = [True, 0]#if it's hung around for longer than 4 secs, put the playback info back.
+						self.statusDisplayTwo.original_widget.set_text(message[1])
+				else:#it isn't song info
+					if not self.showPlayback[0]:
+						self.statusDisplayTwo.original_widget.set_text(message[1])
+					else:
+						self.showPlayback = [False, time.clock()]
+						self.statusDisplayTwo.original_widget.set_text(message[1])
+			loop.draw_screen()
+		except (NameError, AttributeError):
+			pass
+		
 	def setTopStatus(self, message):
 		pass
 	def initFace(self):
@@ -156,7 +160,10 @@ class mainDisplay(object):
 		commandSh.plyr.createRandomList()
 		self.scanPlaylists()
 		self.renderList()
-		
+		self.mainList = urwid.ListBox(self.mainListContent)
+		self.columns = urwid.Columns([self.mainList, self.secondaryList])
+		self.pile = urwid.Pile([self.columns, ("fixed", 1, self.statusDisplayOne), ("fixed", 1, self.statusDisplayTwo), ("fixed", 1, self.cmdShInterface)], 3)
+		self.topFrame = urwid.Frame(self.pile)
 
 		
 		

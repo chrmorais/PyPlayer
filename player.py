@@ -9,7 +9,8 @@
 player.py
 
 """
-
+import time
+initalTime = time.clock()
 import sys
 import urllib
 import scanner
@@ -32,7 +33,7 @@ import fcntl
 import struct
 import yaml
 import cmd
-import time
+import pprint as pprint
 #So, you ignored that STERN warning on the github page, eh? Well, I'm very flattered, but you're in for a bumpy ride. Ok, heres what you need to do:
 #edit the config file, insert paths where directed. Install packages as necessary to fufill packages required for the above imports. Also toss in sqlite3. Then run me, song db should be created automatically.
 runType = 'debug' #currently does nothing much, it's a placeholder! :O
@@ -54,7 +55,7 @@ def uniMe(obj, encoding='utf-8'):
 
 class commandShell(cmd.Cmd):
 	def __init__(self, mainScreen, completekey='tab', stdin=None, stdout=None):
-		initalTime = time.clock()
+		
 		print "".center(62, "=")
 		print '=============== Beginning startup of PyPlayer ' + str(float(appVersion))
 		print ''.center(62, '=')
@@ -486,8 +487,7 @@ class player(object):
 					self.cmdSh.currentPlaylists[self.cmdSh.plyr.currentList].reverse()#selected song is now at the beginning of the list
 		self.primePlayer(location)
 		self.cmdSh.mainScreen.renderList()
-		self.dbName.pprintByLocation(location)
-		
+		#self.dbName.pprintByLocation(location)
 		self.play()
 	def playAList(self, nothing, listname='random', index=0, startWith=None):
 		"""Plays a playlist item of the specified index. Defaults to first song."""
@@ -496,13 +496,14 @@ class player(object):
 			startWith = listname[2]
 			listname = listname[0]
 		self.currentList = listname
+
 		if listname == 'random':
 			if 'random' in self.cmdSh.currentPlaylists.keys():
 				if not startWith == None:
 					self.playLocation(None, startWith, True)#What we should do here is find the selected song in the shuffle PL and move it to the top
 				else:
-					random.shuffle(self.cmdSh.currentPlaylists['random'])
-					self.playLocation(None, self.cmdSh.currentPlaylists[listname][index], True)
+					#random.shuffle(self.cmdSh.currentPlaylists['random'])
+					self.playLocation(None, self.cmdSh.currentPlaylists[listname][index])
 			else:
 				self.createRandomList()
 				random.shuffle(self.cmdSh.currentPlaylists['random'])
@@ -512,7 +513,7 @@ class player(object):
 					self.playLocation(None, self.cmdSh.currentPlaylists[listname][index])
 		else:
 			if not startWith == None:
-				self.playLocation(None, startWith)
+				self.playLocation(None, startWith, True)
 			else:
 				self.playLocation(None, self.cmdSh.currentPlaylists[listname][index])
 
@@ -539,6 +540,9 @@ class player(object):
 		self.time_format = gst.Format(gst.FORMAT_TIME)
 		self.growl = Growl.GrowlNotifier(applicationName=self.cmdSh.appName, notifications=['Song change'], defaultNotifications=['Song change'])
 		self.growl.register()
+		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
+		self.threadName.daemon = True
+		self.threadName.start()
 		
 	def primePlayer(self, location):
 		"""Feed me a location to get the player rolling. After this, call self.play()"""
@@ -546,16 +550,12 @@ class player(object):
 		if isinstance(location, unicode):
 			location = location.encode('utf-8')
 		formattedLocation = 'file://' + urllib.pathname2url(location)
-		songRow = self.dbName.lookupSongByLocation(location)
-
-		self.growl.notify(noteType='Song change', title=songRow['title'], description=songRow['album'], icon=Growl.Image.imageWithIconForFileType(songRow['location'].split('.')[-1]))
 		self.currentlyPlaying = self.dbName.lookupSongByLocation(location)
+		self.growl.notify(noteType='Song change', title=self.currentlyPlaying['title'], description=self.currentlyPlaying['album'], icon=Growl.Image.imageWithIconForFileType(self.currentlyPlaying['location'].split('.')[-1]))	
 	#	if isinstance(self.currentlyPlaying['location'], unicode):
 	#		self.currentlyPlaying['location'] = self.currentlyPlaying['location']
 		self.player.set_property("uri", formattedLocation)
-		self.threadName = threading.Thread(target=self.play_thread, name='theWarden')
-		self.threadName.daemon = True
-		self.threadName.start()
+
 
 		
 	def unprimePlayer(self):
@@ -566,11 +566,11 @@ class player(object):
 	#			self.currentList == None
 	#	except AttributeError:
 	#		pass
-		try:
-			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
-		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread?! Oh well, I don't care! It works!
-			pass
-		self.threadName = None
+#		try:
+#			self.threadName.join()#Here, we give the helper thread time to realise nothing is playing and quit.
+#		except (AttributeError, RuntimeError):#No thread active?! Calling this function from within a helper thread?! Oh well, I don't care! It works!
+#			pass
+#		self.threadName = None
 		return
 	#=============================================================================================
 	#=========== PLAY CONTROL FUNCTIONS
@@ -588,12 +588,11 @@ class player(object):
 			self.player.set_state(gst.STATE_PLAYING)
 		
 	def playNext(self):
-		lastPlayed = self.currentlyPlaying
-		self.unprimePlayer()
-		if self.currentList == None or self.currentList =='':
+		#self.currentlyPlaying = self.currentlyPlaying
+		if self.currentList == None or self.currentList =='':#shouldn't happen, this is just insurance
 			self.playAList(None, 'random')
 			return
-		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(lastPlayed['location']) + 1
+		nextSongIndex = self.cmdSh.currentPlaylists[self.currentList].index(self.currentlyPlaying['location']) + 1
 		if nextSongIndex >= len(self.cmdSh.currentPlaylists[self.currentList]):#are we at the end of the playlist?
 			if self.currentList.startswith('temp'):#we want to play random songs afterwards, not loop.
 				self.playAList(None, 'random')
@@ -618,25 +617,28 @@ class player(object):
 	#=============================================================================================
 	def play_thread(self):#remind me to replace simple two int comparison with a queue. then we query more often to work a long list of
 	#old progress indicators rather than just two. Or just compare duration and position <3
-		while not gst.STATE_PLAYING == self.player.get_state()[1]:
-			time.sleep(.1)
-		self.mainScreen.setStatus("reset")
+#		while True:
+#			while not gst.STATE_PLAYING == self.player.get_state()[1]:
+#				time.sleep(.1)
+#			self.mainScreen.setStatus("reset")
+
+		
 		while True:
-			try:
-				DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
-				break
-			except gst.QueryError:
-			#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 1 second.
-				#self.mainScreen.setStatus((None, "I like monkeys"))
-				try:
-					DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 1, False)
-				except TypeError:
-					DurationString = None
-				break
-		songInfo = self.dbName.pprintByLocation(self.currentlyPlaying['location'])
-		while True:
-			#try:			
+
 			if gst.STATE_PLAYING == self.player.get_state()[1]:
+				DurationString = self.secondsToReadableTime(self.currentlyPlaying['length'] - 1, False)
+				printList = list()
+				printList.append(u'ID: ')
+				printList.append(str(self.currentlyPlaying['ID']).decode('utf-8'))
+				printList.append(u' | Title: ')
+				printList.append(database.uniMe(self.currentlyPlaying["title"]))
+				printList.append(u' | Album: ')
+				printList.append(database.uniMe(self.currentlyPlaying["album"]))
+				printList.append(u' | Artist: ')
+				printList.append(database.uniMe(self.currentlyPlaying["artist"]))
+				printList.append(u' | Length: ')
+				printList.append(database.uniMe(str(self.currentlyPlaying["length"])))
+				songInfo = ''.join(printList)
 				pos_int = self.player.query_position(self.time_format, None)[0]
 				PositionString = self.secondsToReadableTime(pos_int, True)
 				stringToWrite = (('Playing: ' + PositionString + " of " + DurationString),  songInfo)
@@ -646,7 +648,7 @@ class player(object):
 						pass
 					else:
 						self.playNext()
-						break
+	#					break
 			elif gst.STATE_PAUSED == self.player.get_state()[1]: 
 				pos_int = self.player.query_position(self.time_format, None)[0]
 				PositionString = self.secondsToReadableTime(pos_int, True)
@@ -654,10 +656,10 @@ class player(object):
 				self.mainScreen.setStatus(stringToWrite, True)
 			elif gst.STATE_NULL == self.player.get_state()[1]:#die otherwise!
 				self.mainScreen.setStatus(('Nothing playing.', ""))
-				break
+		#		break
 			time.sleep(1)
-			#except OSError, e:
-			#	self.mainScreen.setStatus('Error detected: ' + e)
+				#except OSError, e:
+				#	self.mainScreen.setStatus('Error detected: ' + e)
 				
 	#=============================================================================================
 	#=========== MISC FUNCTIONS
@@ -693,6 +695,14 @@ if __name__ == "__main__":
 	
 	
 #the graveyard
+#try:
+#	DurationString = self.secondsToReadableTime(self.player.query_duration(self.time_format, None)[0], True)
+#	break
+#except gst.QueryError:
+#Unable to query duration from gstreamer. Fuck you, gstreamer. Falling back to stored data minus 1 second.
+	#self.mainScreen.setStatus((None, "I like monkeys"))
+	#don't ask
+#	try:
 #	elif userInput[0] == 'check':#this command checks for lengths of "Unknown"
 #		results = self.db.getListOfSongs()
 #		for item in results:
